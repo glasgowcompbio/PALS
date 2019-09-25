@@ -13,12 +13,13 @@ from sklearn import preprocessing
 NUM_RESAMPLES = 500
 
 
-class PlageAnalysis(object):
+class PALS(object):
 
     # The constructor just takes in the analysis and defines the project
-    def __init__(self, min_intensity):
-
+    def __init__(self, data_source, min_intensity=5000, num_resamples=NUM_RESAMPLES):
+        self.data_source = data_source
         self.min_intensity = min_intensity  # replace a group with all zero values with this min intensity
+        self.num_resamples = num_resamples
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
         # subsequently effects all of the subsequent calculations
@@ -47,33 +48,32 @@ class PlageAnalysis(object):
     """
 
     def get_plage_activity_df(self):
-        int_df = self.construct_peak_int_df()
-        self._standardize_intensity_df(int_df)
+        int_df = self._standardize_intensity_df(self.data_source.int_df)
         plage_activity_df = self._calculate_pathway_activity_df(int_df)
         return plage_activity_df
 
     """Obtains a plage dataframe with resampling"""
 
     def set_up_resample_plage_p_df(self, activity_df):
-        logger.info("Calculating plage p-values")
-        comparisons_samples_map = {comp.id: self.get_comparison_samples(comp) for comp in self.comparisons}
-        comparisons_names_map = {comp.id: self.get_comparison_names(comp) for comp in self.comparisons}
-
+        logger.info("Calculating plage p-values with resampling")
         all_pvalues = [activity_df.index, activity_df['pw name']]
         column_names = ['pw_name']
-        for comp in self.comparisons:
-            column_names.append(comparisons_names_map[comp.id] + ' p-value')
+        for comp in self.data_source.comparisons:
+            logger.debug('Comparison %s' % comp['name'])
+            column_names.append(comp['name'] + ' p-value')
             null_max_tvalues = []
             null_min_tvalues = []
-            comparison_samples = comparisons_samples_map[comp.id]
+            comparison_samples = self.data_source.get_comparison_samples(comp)
             start = timeit.default_timer()
-            for iteration in range(1, NUM_RESAMPLES + 1):
+            for iteration in range(self.num_resamples):
+                if iteration % 100 == 0:
+                    logger.debug('Resampling %d/%d' % (iteration, self.num_resamples))
                 condition_1, condition_2 = self._permute_two_lists(comparison_samples[0], comparison_samples[1])
                 permutation_tvalues = self._calculate_t_values(activity_df, condition_1, condition_2)
                 null_max_tvalues.append(max(permutation_tvalues))
                 null_min_tvalues.append(min(permutation_tvalues))
             stop = timeit.default_timer()
-            print(stop - start)
+            logger.debug('Total time %d' % (stop - start))
             tvalues = self._calculate_t_values(activity_df, comparison_samples[0], comparison_samples[1])
             pvalues = self._compare_resamples(tvalues, null_max_tvalues, null_min_tvalues)
             all_pvalues.append(pvalues)
@@ -101,21 +101,18 @@ class PlageAnalysis(object):
     def set_up_plage_p_df(self, activity_df):
         logger.info("Calculating plage p-values")
         t_test_list = []
-        comparisons_samples_map = {comp.id: self.get_comparison_samples(comp) for comp in self.comparisons}
-        comparisons_names_map = {comp.id: self.get_comparison_names(comp) for comp in self.comparisons}
-
         for pathway, row in activity_df.iterrows():
             name = row[0]
             path_params = [pathway, name]
             column_names = ['pw_name']
             for comp in self.comparisons:
-                comparison_samples = comparisons_samples_map[comp.id]
+                comparison_samples = self.data_source.get_comparison_samples(comp)
                 condition_1 = comparison_samples[0]
                 condition_2 = comparison_samples[1]
                 c1 = activity_df.loc[pathway, condition_1].values
                 c2 = activity_df.loc[pathway, condition_2].values
                 path_params.append(list(ttest_ind(c1, c2))[1])
-                column_names.append(comparisons_names_map[comp.id] + ' p-value')
+                column_names.append(comp['name'] + ' p-value')
             t_test_list.append(path_params)
 
         t_test = pd.DataFrame(t_test_list).set_index([0])
@@ -141,17 +138,15 @@ class PlageAnalysis(object):
         # Calculate the hg scores and create a temporary df to merge with the main df
         p_value_list = []
         mapids = pathway_df.index.values.tolist()
-        kegg_pw_f, ds_pw_f = self.get_unique_pw_f()
+        kegg_pw_f, ds_pw_f = self.data_source.get_unique_pw_f()
 
         for mp in mapids:
-            tot_pw_f = pathway_df.get_value(mp, 'unq_pw_F')
-            formula_detected = pathway_df.get_value(mp, 'tot_ds_F')
+            tot_pw_f = pathway_df.loc[mp]['unq_pw_F']
+            formula_detected = pathway_df.loc[mp]['tot_ds_F']
             sf = self.get_sf(formula_detected, kegg_pw_f, tot_pw_f + self.PW_F_OFFSET, ds_pw_f)
-            if sf == 0:
-                print
-                "yup"
             exp_value = hypergeom.mean(kegg_pw_f, tot_pw_f, ds_pw_f).round(2)
             p_value_list.append([mp, sf, exp_value])
+
         p_value = pd.DataFrame(p_value_list)
         p_value_df = p_value.set_index([0])
         # Exp_F is the number of formula that would be expected in this pathway by chance
@@ -168,28 +163,23 @@ class PlageAnalysis(object):
 
         # Make a combined_p df to merge with the main df
         combine_p_list = []
-        pathway_id_list = []
-        comparisons_names_map = {comp.id: self.get_comparison_names(comp) for comp in self.comparisons}
+        column_names = [comp['name'] + ' comb_p' for comp in self.data_source.comparisons]
         for mp in mapids:
-            # Added pathway ID to list for webpage - need to fix here
-            pathway_id_list.append(DataSourceSuperPathway.objects.get(identifier=mp).pathway.id)
-            column_names = [comparisons_names_map[comp.id] + ' comb_p' for comp in self.comparisons]
             combine_p_pathway = [mp]
-            for comp in self.comparisons:
-                p_value = pathway_df_merge.get_value(mp, comparisons_names_map[comp.id] + ' p-value')
-                sf = pathway_df_merge.get_value(mp, 'sf')
+            for comp in self.data_source.comparisons:
+                p_value_colname = comp['name'] + ' p-value'
+                p_value = pathway_df_merge.loc[mp][p_value_colname]
+                sf = pathway_df_merge.loc[mp]['sf']
                 com_p = combine_pvalues([p_value, sf], 'stouffer', [self.PLAGE_WEIGHT, self.HG_WEIGHT])
                 combine_p_pathway.append(com_p[1])
             combine_p_list.append(combine_p_pathway)
 
-            comb_p = pd.DataFrame(combine_p_list)
-            comb_p_df = comb_p.set_index([0])
-            # Exp_F is the number of formula that would be expected in this pathway by chance
-            comb_p_df.columns = [column_names]
-
+        comb_p = pd.DataFrame(combine_p_list)
+        comb_p_df = comb_p.set_index([0])
+        # Exp_F is the number of formula that would be expected in this pathway by chance
+        comb_p_df.columns = column_names
         pathway_df_final = pd.merge(pathway_df_merge, comb_p_df[column_names], left_index=True, right_index=True,
                                     how='outer')
-        pathway_df_final.insert(1, "ID", pathway_id_list)
         return pathway_df_final
 
     """Writes dataframe as csv"""
@@ -210,9 +200,9 @@ class PlageAnalysis(object):
 
     def _standardize_intensity_df(self, int_df):
         # Change the 0.00 intensities in the matrix to useable values
-        self._change_zero_peak_ints(int_df)
+        int_df = self._change_zero_peak_ints(int_df)
 
-        logger.info("Scaling the data across the sample: zero mean and unit variance")
+        logger.debug("Scaling the data across the sample: zero mean and unit variance")
 
         # standardize the data across the samples (zero mean and unit variance))
         scaled_data = np.log(np.array(int_df))
@@ -225,8 +215,8 @@ class PlageAnalysis(object):
         # Standardizing, testing data
         mean = np.round(int_df.values.mean(axis=1))
         variance = np.round(int_df.values.std(axis=1))
-        logger.info("Mean values of the rows in the DF is %s", str(mean))
-        logger.info("Variance in the rows of the DF is %s", str(variance))
+        logger.debug("Mean values of the rows in the DF is %s" % str(mean))
+        logger.debug("Variance in the rows of the DF is %s" % str(variance))
         return int_df
 
     """ A method to change a 'zero' entries in a dataframe.
@@ -239,23 +229,17 @@ class PlageAnalysis(object):
 
     def _change_zero_peak_ints(self, peak_int_df):
         # Get the min_intensity value set for the analysis
-        logger.info("Setting the zero intensity values in the dataframe")
-        condition_groups, groups_df = self.get_groups(peak_int_df)
-        gs = Group.objects.filter(attribute__comparison__in=self.comparisons).distinct()
-        factors = [g.name for g in gs]
-        grouping = groups_df.groupby(factors)
-
+        logger.debug("Setting the zero intensity values in the dataframe")
         # Replace 0.0 with NaN for easier operations ahead
         peak_int_df[peak_int_df == 0.0] = None
-        for group in grouping.groups.values():
-            samples = groups_df.loc[group, 'sample']
-
+        for group_name, samples in self.data_source.groups.items():
             # If all zero in group then replace with minimum
             peak_int_df.loc[peak_int_df.loc[:, samples].isnull().all(axis=1), samples] = self.min_intensity
 
             # Replace any other zeros with mean of group
             subset_df = peak_int_df.loc[:, samples]
             peak_int_df.loc[:, samples] = subset_df.mask(subset_df.isnull(), subset_df.mean(axis=1), axis=0)
+        return peak_int_df
 
     """ Method to calculate the pathway activity DF given a dataframe of standardized intensities
     :param int_df: Takes in a standardized dataframe (of peak intensites)
@@ -263,32 +247,20 @@ class PlageAnalysis(object):
     """
 
     def _calculate_pathway_activity_df(self, int_df):
-        # Get all of the distinct pathways associated with this dataset
-        peak_ids = int_df.index.values
-        peaks = Peak.objects.filter(id__in=peak_ids)
-
-        compounds = Compound.objects.filter(Q(identified=True) | (Q(identified=False) & Q(adduct__in=["M+H", "M-H"])),
-                                            repositorycompound__db_name='kegg', peak__in=peaks)
-
-        # Pathways from the dataset and those which have compounds annotated as M+H or M-H adducts
-        pathways = Pathway.objects.filter(datasourcesuperpathway__compoundpathway__compound__in=compounds,
-                                          datasourcesuperpathway__compoundpathway__compound__peak__dataset=self.dataset).distinct()
+        pathways = self.data_source.ds_pathways
 
         # For all of the pathways get all of the peak IDs
         pathway_activities = []
         pw_names = []
         for pw in pathways:
-            peaks = Peak.objects.filter(
-                Q(compound__identified=True) | (Q(compound__identified=False) & Q(compound__adduct__in=["M+H", "M-H"])),
-                compound__compoundpathway__pathway=pw,
-                dataset=self.dataset).distinct()
-            peak_ids = [p.id for p in peaks]
-            pathway_peaks = int_df.ix[peak_ids] / np.sqrt(len(peak_ids))  # DF selected from peak IDs.
+            peak_ids = self.data_source.ds_pathways_peak_ids[pw]
+            pathway_peaks = int_df.loc[peak_ids] / np.sqrt(len(peak_ids))  # DF selected from peak IDs.
             w, d, c = np.linalg.svd(np.array(pathway_peaks))
 
+            pw_name = self.data_source.pathway_dict[pw]
             pw_act_list = []
-            pw_act_list.append(DataSourceSuperPathway.objects.get(pathway=pw).identifier)
-            pw_names.append(pw.name)
+            pw_act_list.append(pw)
+            pw_names.append(pw_name)
             pw_act_list.extend(list(c[0] * d[0]))
 
             pathway_activities.append(pw_act_list)
@@ -297,7 +269,6 @@ class PlageAnalysis(object):
             activity_df.columns = int_df.columns
             activity_df.index.name = "Pathway ids"
             activity_df.insert(0, 'pw name', pw_names)
-            activity_df.name = self.analysis.experiment.title + "_" + str(self.analysis.id)
         return activity_df
 
     def _permute_two_lists(self, list1, list2):
@@ -333,17 +304,9 @@ class PlageAnalysis(object):
     def calculate_coverage_df(self, mapids):
         logger.info("Calculating dataset formula coverage")
 
-        # Get the pathway and compounds for a dataset
-        pathways_info = get_ds_pw_compounds(self.dataset)
-        pw_compounds = [item[1] for item in pathways_info]
-
         # num_formula: Stores the number of unqique kegg formulae for a pathway
-        num_formula = []
-        for mpid in mapids:
-            n_form = self.get_pw_unique_F(mpid)
-            num_formula.append(n_form)
-
-        num_totalF = [self.get_unique_F_by_id(pw_comps) for pw_comps in pw_compounds]
+        num_formula = self.data_source.get_pw_unique_F(mapids)
+        num_totalF = self.data_source.get_ds_pw_compounds(mapids)
 
         # unq_pw_f: unique formula expected for a pathway
         # tot_ds_F: unique formula for a pathway in a dataset

@@ -60,6 +60,7 @@ def get_ms2_peaks(token, host, analysis_id, as_dataframe=False):
 
 def get_formula_df(token, host, analysis_id):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
+    ms1_df['identified'] = ms1_df['identified'].astype('bool') # convert identified column ('True', 'False') to boolean
 
     # select only peaks that have been (identified) or (annotated with adduct type M+H and M-H).
     identified_peaks = ms1_df.query('identified == True')
@@ -67,6 +68,6 @@ def get_formula_df(token, host, analysis_id):
     identified_annotated_peaks = pd.concat([identified_peaks, annotated_peaks])
 
     # set pid as index, extract formula
-    formula_df = identified_annotated_peaks[['pid', 'formula']]
+    formula_df = identified_annotated_peaks[['pid', 'db', 'identifier', 'formula']]
     formula_df = formula_df.set_index('pid')
     return formula_df
