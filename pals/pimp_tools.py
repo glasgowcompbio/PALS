@@ -58,6 +58,12 @@ def get_ms2_peaks(token, host, analysis_id, as_dataframe=False):
     return payload
 
 
+def get_experimental_design(token, host, analysis_id):
+    url = 'http://{}/export/get_experimental_design?analysis_id={}'.format(host, analysis_id)
+    payload = get_data(token, url, False)
+    return payload
+
+
 def get_formula_df(token, host, analysis_id):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
     ms1_df['identified'] = ms1_df['identified'].astype('bool') # convert identified column ('True', 'False') to boolean
