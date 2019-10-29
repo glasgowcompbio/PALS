@@ -64,7 +64,7 @@ def get_experimental_design(token, host, analysis_id):
     return payload
 
 
-def get_formula_df(token, host, analysis_id):
+def get_formula_df(token, host, analysis_id, database_name='kegg', polarity='positive'):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
     ms1_df['identified'] = ms1_df['identified'].astype('bool') # convert identified column ('True', 'False') to boolean
 
@@ -74,6 +74,9 @@ def get_formula_df(token, host, analysis_id):
     identified_annotated_peaks = pd.concat([identified_peaks, annotated_peaks])
 
     # set pid as index, extract formula
-    formula_df = identified_annotated_peaks[['pid', 'db', 'identifier', 'formula']]
+    # formula_df = identified_annotated_peaks[['pid', 'db', 'identifier', 'formula']]
+    formula_df = identified_annotated_peaks
     formula_df = formula_df.set_index('pid')
+    formula_df = formula_df[formula_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
+    formula_df = formula_df[formula_df['polarity'] == polarity] # filter by polarity, e.g. 'positive'
     return formula_df

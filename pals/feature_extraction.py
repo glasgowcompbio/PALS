@@ -58,7 +58,6 @@ class DataSource(object):
             self.pw_cmpd_formula_dict = dict(pw_cmpd_formula_dict)
 
             # a dataframe of peak id, originating database name, database id, formula
-            formula_df = formula_df[formula_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
             ds_pathways = []
             ds_pathways_peak_ids = defaultdict(list)
             for idx, row in formula_df.iterrows():
