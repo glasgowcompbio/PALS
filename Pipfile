@@ -17,6 +17,7 @@ biopython = "*"
 loguru = "*"
 xmltodict = "*"
 requests = "*"
+rpy2 = "*"
 
 [dev-packages]
 
