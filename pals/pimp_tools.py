@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 import requests
+import numpy as np
 
 PIMP_HOST = 'polyomics.mvls.gla.ac.uk'
 
@@ -67,16 +68,39 @@ def get_experimental_design(token, host, analysis_id):
 def get_formula_df(token, host, analysis_id, database_name='kegg', polarity='positive'):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
     ms1_df['identified'] = ms1_df['identified'].astype('bool') # convert identified column ('True', 'False') to boolean
+    ms1_df = ms1_df[ms1_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
+    # ms1_df = ms1_df[ms1_df['polarity'] == polarity] # filter by polarity, e.g. 'positive'
+
+    ms1_df.rename(columns={
+        'pid': 'row_id',
+        'identifier': 'entity_id',
+        'formula': 'unique_id'
+    }, inplace=True)
+    ms1_df = ms1_df.set_index('row_id')
 
     # select only peaks that have been (identified) or (annotated with adduct type M+H and M-H).
-    identified_peaks = ms1_df.query('identified == True')
-    annotated_peaks = ms1_df.query('identified == False & (adduct == "M+H" | adduct == "M-H")')
-    identified_annotated_peaks = pd.concat([identified_peaks, annotated_peaks])
+    # doesn't work
+    # identified_peaks = ms1_df.query('identified == True')
+    # annotated_peaks = ms1_df.query('identified == False & (adduct == "M+H" | adduct == "M-H")')
+    # identified_annotated_peaks = pd.concat([identified_peaks, annotated_peaks])
+    # formula_df = identified_annotated_peaks
 
-    # set pid as index, extract formula
-    # formula_df = identified_annotated_peaks[['pid', 'db', 'identifier', 'formula']]
-    formula_df = identified_annotated_peaks
-    formula_df = formula_df.set_index('pid')
-    formula_df = formula_df[formula_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
-    formula_df = formula_df[formula_df['polarity'] == polarity] # filter by polarity, e.g. 'positive'
+    formulas = ms1_df['unique_id'].unique()
+    to_remove = []
+    for formula in formulas:
+        peaks = ms1_df[ms1_df['unique_id'] == formula]
+
+        # filter by adducts
+        adducts = peaks['adduct'].unique()
+        no_adduct = 'M+H' not in adducts and 'M-H' not in adducts
+
+        # filter by ms2 annotations
+        frank_annots = peaks['frank_annot'].values
+        no_annot = np.all(pd.isnull(frank_annots))
+
+        if no_adduct and no_annot:
+            to_remove.append(formula)
+
+    formula_df = ms1_df[~ms1_df['unique_id'].isin(to_remove)]
+    # formula_df = formula_df[['entity_id', 'unique_id']] # select only the columns we need
     return formula_df
