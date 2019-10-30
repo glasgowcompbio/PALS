@@ -18,6 +18,8 @@ loguru = "*"
 xmltodict = "*"
 requests = "*"
 rpy2 = "*"
+qtconsole = "*"
+pyqt5 = "*"
 
 [dev-packages]
 
