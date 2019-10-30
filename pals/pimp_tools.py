@@ -102,5 +102,5 @@ def get_formula_df(token, host, analysis_id, database_name='kegg', polarity='pos
             to_remove.append(formula)
 
     formula_df = ms1_df[~ms1_df['unique_id'].isin(to_remove)]
-    # formula_df = formula_df[['entity_id', 'unique_id']] # select only the columns we need
+    formula_df = formula_df[['entity_id', 'unique_id']] # select only the columns we need
     return formula_df

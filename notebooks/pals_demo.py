@@ -36,7 +36,7 @@ except FileNotFoundError:
         pickle.dump(experimental_design, f)
 
 ds = DataSource(int_df, formula_df, experimental_design, database_name='kegg')
-pals = PALS(ds, min_intensity=5000, num_resamples=10)
+pals = PALS(ds, min_replace=5000, num_resamples=10)
 activity_df = pals.get_plage_activity_df()
 plage_df = pals.set_up_resample_plage_p_df(activity_df)
 pathway_df = pals.calculate_hg_values(plage_df)
