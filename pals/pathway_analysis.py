@@ -10,7 +10,7 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from sklearn import preprocessing
 
-NUM_RESAMPLES = 500
+NUM_RESAMPLES = 1000
 
 
 class PALS(object):
@@ -278,13 +278,26 @@ class PALS(object):
         slist2 = l[len(list1):len(l)]
         return slist1, slist2
 
+    @staticmethod
+    def _tstats(a):
+        m = np.mean(a, axis=1)
+        n = a.shape[1]
+        var = np.sum(np.square(a - m[:, np.newaxis]), axis=1) / (n - 1)
+
+        return m, n, var
+
     def _calculate_t_values(self, activity_df, condition_1, condition_2):
-        tvalues = []
-        for pathway in activity_df.index:
-            c1 = activity_df.loc[pathway, condition_1].values
-            c2 = activity_df.loc[pathway, condition_2].values
-            tvalues.append(list(ttest_ind(c1, c2))[0])
-        return (tvalues)
+
+        c1 = activity_df.loc[:, condition_1].values
+        c2 = activity_df.loc[:, condition_2].values
+
+        m1, n1, var1 = PALS._tstats(c1)
+        m2, n2, var2 = PALS._tstats(c2)
+
+        se_total = np.sqrt(var1 / n1 + var2 / n2)
+        tvalues = (m1 - m2) / se_total
+
+        return tvalues
 
     def _compare_resamples(self, tvalues, null_max_tvalues, null_min_tvalues):
         pvalues = []

@@ -17,6 +17,8 @@ biopython = "*"
 loguru = "*"
 xmltodict = "*"
 requests = "*"
+qtconsole = "*"
+pyqt5 = "*"
 
 [dev-packages]
 
