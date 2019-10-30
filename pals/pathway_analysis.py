@@ -268,7 +268,7 @@ class PALS(object):
             pathway_data = measurement_df.loc[row_ids] / np.sqrt(len(row_ids))  # DF selected from peak IDs.
             w, d, c = np.linalg.svd(np.array(pathway_data))
 
-            pw_name = self.data_source.pathway_dict[pw]
+            pw_name = self.data_source.pathway_dict[pw]['display_name']
             pw_act_list = []
             pw_act_list.append(pw)
             pw_names.append(pw_name)

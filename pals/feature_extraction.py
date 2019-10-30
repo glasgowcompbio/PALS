@@ -41,7 +41,9 @@ class DataSource(object):
             pathway_to_unique_ids_dict = defaultdict(set)  # mapid -> [ formulas ]
             for entity_id, pathway_ids in self.mapping_dict.items():
                 try:
-                    unique_id = self.entity_dict[entity_id]['unique_id']
+                    # if unique_id is present, then use it
+                    # useful when we want to represent chemicals as formulae
+                    unique_id = self._get_unique_id(entity_id)
                     for pathway_id in pathway_ids:
                         pathway_to_unique_ids_dict[pathway_id].add(unique_id)
                 except KeyError:
@@ -51,8 +53,13 @@ class DataSource(object):
             # a dataframe of peak id, originating database name, database id, formula
             dataset_pathways = []
             dataset_pathways_to_row_ids = defaultdict(list)
+            dataset_unique_ids = []
             for row_id, row in annotation_df.iterrows():
                 entity_id = row['entity_id']
+                # convert entity id to unique id if possible
+                unique_id = self._get_unique_id(entity_id)
+                dataset_unique_ids.append(unique_id)
+                # get the mapping between dataset pathway to row ids
                 try:
                     possible_pathways = self.mapping_dict[entity_id]
                     dataset_pathways.extend(possible_pathways)
@@ -62,31 +69,12 @@ class DataSource(object):
                     continue
             self.dataset_pathways = set(dataset_pathways)
             self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
-            self.dataset_unique_ids = set(annotation_df['unique_id'].values)
+            self.dataset_unique_ids = set(dataset_unique_ids)
 
         # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
         # and the number of unique formulas in the ds and in pathways
-        self.pathway_unique_ids_count = len(self.get_pathway_unique_ids())
-        self.pathway_dataset_unique_ids_count = len(self.get_pathway_dataset_unique_ids())
-
-    def get_pathway_unique_ids(self):
-        """
-        Returns the unique ids present in pathways
-        :return: unique ids present in pathways
-        """
-        all_entity_ids = set(self.entity_dict.keys())  # all entity ids in database
-        pathway_entity_ids = set(self.mapping_dict.keys())  # all entity ids found in pathways
-        entity_ids_in_pathways = all_entity_ids.intersection(pathway_entity_ids)
-        pathway_unique_ids = set([self.entity_dict[entity_id]['unique_id'] for entity_id in entity_ids_in_pathways])
-        return pathway_unique_ids
-
-    def get_pathway_dataset_unique_ids(self):
-        """
-        Returns the unique ids present in pathways in the dataset
-        :return: unique ids present in pathways in the dataset
-        """
-        pathway_dataset_unique_ids = self.get_pathway_unique_ids().intersection(self.dataset_unique_ids)
-        return pathway_dataset_unique_ids
+        self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
+        self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
 
     def get_pathway_unique_counts(self, pathway_ids):
         """
@@ -124,3 +112,35 @@ class DataSource(object):
         conditions = [comp['control'], comp['case']]
         condition_samples = list(map(lambda group_name: self.groups[group_name], conditions))
         return condition_samples
+
+    def _get_unique_id(self, entity_id):
+        """
+        Returns unique id of an entity if 'unique_id' is present in the entity dictionary.
+        Useful when we want to represent kegg chemical id as a compound
+        :param entity_id: the unique id
+        :return: either the unique id if available, or the original entity id otherwise
+        """
+        if 'unique_id' in self.entity_dict[entity_id]:
+            unique_id = self.entity_dict[entity_id]['unique_id']
+        else:
+            unique_id = entity_id
+        return unique_id
+
+    def _get_pathway_unique_ids(self):
+        """
+        Returns the unique ids present in pathways
+        :return: unique ids present in pathways
+        """
+        all_entity_ids = set(self.entity_dict.keys())  # all entity ids in database
+        pathway_entity_ids = set(self.mapping_dict.keys())  # all entity ids found in pathways
+        entity_ids_in_pathways = all_entity_ids.intersection(pathway_entity_ids)
+        pathway_unique_ids = set([self.entity_dict[entity_id]['unique_id'] for entity_id in entity_ids_in_pathways])
+        return pathway_unique_ids
+
+    def _get_pathway_dataset_unique_ids(self):
+        """
+        Returns the unique ids present in pathways in the dataset
+        :return: unique ids present in pathways in the dataset
+        """
+        pathway_dataset_unique_ids = self._get_pathway_unique_ids().intersection(self.dataset_unique_ids)
+        return pathway_dataset_unique_ids
