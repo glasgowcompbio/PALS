@@ -8,9 +8,9 @@ from collections import defaultdict
 
 class DataSource(object):
 
-    def __init__(self, int_df, formula_df, experimental_design, database_name='kegg'):
+    def __init__(self, measurement_df, annotation_df, experimental_design, database_name='kegg'):
         # a dataframe of peak intensities, where rows = ms1_peak_id and columns = sample_name
-        self.int_df = int_df
+        self.measurement_df = measurement_df
 
         # a dictionary specifying the experimental design
         self.experimental_design = experimental_design
@@ -27,97 +27,87 @@ class DataSource(object):
             data = json.load(f)
 
             # mapid -> pathway name
-            self.pathway_dict = data['pw_dict']
-
-            # mapid -> [ compound names ]
-            self.pathway_cmpd_dict = data['pathway_cmpd_dict']
-
-            # compound name -> formula, extracted from xml file
-            self.cmpd_formula_dict = data['cmpd_formula_dict']
+            self.pathway_dict = data['pathway_dict']
 
             # compound id -> formula, extracted from xml file
-            self.cmpd_id_formula_dict = data['cmpd_id_formula_dict']
-
-            # assert len(self.cmpd_formula_dict) == len(self.cmpd_id_formula_dict)
+            self.entity_dict = data['entity_dict']
 
             # compound id -> [ mapids ], extracted from rdata file
-            self.cmpd_id_pw_dict = data['cmpd_id_pw_dict']
+            self.mapping_dict = data['mapping_dict']
 
             # map between pathway id to compound ids and formulas
-            pw_cmpd_id_dict = defaultdict(list) # mapid -> [ compound ids ]
-            pw_cmpd_formula_dict = defaultdict(set) # mapid -> [ formulas ]
-            for cmpd_id, mapids in self.cmpd_id_pw_dict.items():
+            pathway_to_unique_ids_dict = defaultdict(set) # mapid -> [ formulas ]
+            for entity_id, pathway_ids in self.mapping_dict.items():
                 try:
-                    cmpd_formula = self.cmpd_id_formula_dict[cmpd_id]
-                    for mapid in mapids:
-                        pw_cmpd_id_dict[mapid].append(cmpd_id)
-                        pw_cmpd_formula_dict[mapid].add(cmpd_formula)
+                    unique_id = self.entity_dict[entity_id]['unique_id']
+                    for pathway_id in pathway_ids:
+                        pathway_to_unique_ids_dict[pathway_id].add(unique_id)
                 except KeyError:
                     continue  # TODO: skip this compound since we can't find its name or formula. Should never happen!!
-            self.pw_cmpd_id_dict = dict(pw_cmpd_id_dict)
-            self.pw_cmpd_formula_dict = dict(pw_cmpd_formula_dict)
+            self.pathway_to_unique_ids_dict = dict(pathway_to_unique_ids_dict)
 
             # a dataframe of peak id, originating database name, database id, formula
-            ds_pathways = []
-            ds_pathways_peak_ids = defaultdict(list)
-            for idx, row in formula_df.iterrows():
-                cmpd_id = row['identifier']
-                pid = idx
+            dataset_pathways = []
+            dataset_pathways_to_row_ids = defaultdict(list)
+            for row_id, row in annotation_df.iterrows():
+                entity_id = row['entity_id']
                 try:
-                    possible_pathways = self.cmpd_id_pw_dict[cmpd_id]
-                    ds_pathways.extend(possible_pathways)
+                    possible_pathways = self.mapping_dict[entity_id]
+                    dataset_pathways.extend(possible_pathways)
                     for p in possible_pathways:
-                        ds_pathways_peak_ids[p].append(pid)
+                        dataset_pathways_to_row_ids[p].append(row_id)
                 except KeyError: # no information about compound -> pathway in our database
                     continue
-            self.ds_pathways = set(ds_pathways)
-            self.ds_pathways_peak_ids = dict(ds_pathways_peak_ids)
-            self.ds_formulas = set(formula_df['formula'].values)
+            self.dataset_pathways = set(dataset_pathways)
+            self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
+            self.dataset_unique_ids = set(annotation_df['unique_id'].values)
 
         # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
         # and the number of unique formulas in the ds and in pathways
-        self.kegg_pw_formulas, self.unique_ds_pw_fs = self.get_unique_pw_f()
+        self.pathway_unique_ids_count = len(self.get_pathway_unique_ids())
+        self.pathway_dataset_unique_ids_count = len(self.get_pathway_dataset_unique_ids())
 
-    """
-    Method to return the unique pathway formulas associated with an analysis
-    """
+    def get_pathway_unique_ids(self):
+        """
+        Returns the unique ids present in pathways
+        :return: unique ids present in pathways
+        """
+        all_entity_ids = set(self.entity_dict.keys()) # all entity ids in database
+        pathway_entity_ids = set(self.mapping_dict.keys()) # all entity ids found in pathways
+        entity_ids_in_pathways = all_entity_ids.intersection(pathway_entity_ids)
+        pathway_unique_ids = set([self.entity_dict[entity_id]['unique_id'] for entity_id in entity_ids_in_pathways])
+        return pathway_unique_ids
 
-    def get_unique_pw_f(self):
-        # set of compounds by id in Kegg
-        kegg_cmpd_ids = set(self.cmpd_id_formula_dict.keys())
-        # set of compounds by id found in the pathways
-        pathway_cmpd_ids = set(self.cmpd_id_pw_dict.keys())
-        # These are the pathway compound (by id) that are also present in Kegg
-        pw_cmpd_ids = kegg_cmpd_ids.intersection(pathway_cmpd_ids)
+    def get_pathway_dataset_unique_ids(self):
+        """
+        Returns the unique ids present in pathways in the dataset
+        :return: unique ids present in pathways in the dataset
+        """
+        pathway_dataset_unique_ids = self.get_pathway_unique_ids().intersection(self.dataset_unique_ids)
+        return pathway_dataset_unique_ids
 
-        kegg_pathway_formulas = {}
-        for c in pw_cmpd_ids:
-            kegg_pathway_formulas[c] = self.cmpd_id_formula_dict[c]
-        kegg_pw_formulas = set(kegg_pathway_formulas.values())
+    def get_pathway_unique_counts(self, pathway_ids):
+        """
+        Returns the number of unique ids associated to each pathway
+        :param pathway_ids: pathway ids
+        :return: a list of the number of unique ids associated to each pathway
+        """
+        return [len(self.pathway_to_unique_ids_dict[pathway_id]) for pathway_id in pathway_ids]
 
-        # ds_formulas that are M+H or M-H - probably should use
-        unique_ds_pw_fs = kegg_pw_formulas.intersection(self.ds_formulas)
-        return len(kegg_pw_formulas), len(unique_ds_pw_fs)
-
-    """ Param: the mapid of a pathway (e.g. map00010)
-        Returns: the number of unique formula identifiable pathway
-    """
-
-    def get_pw_unique_F(self, mapids):
-        return [len(self.pw_cmpd_formula_dict[mapid]) for mapid in mapids]
-
-    """
-    Takes in a list of pathway ids and return the number of formulas in the dataset for those pathways"""
-
-    def get_ds_pw_compounds(self, mapids):
-        num_totalF = []
-        for mapid in mapids:
-            if mapid in self.ds_pathways:  # get all the formulas of the pathway in the dataset
-                formulas = self.pw_cmpd_formula_dict[mapid].intersection(self.ds_formulas)
-                num_totalF.append(len(formulas))
+    def get_pathway_dataset_unique_counts(self, pathway_ids):
+        """
+        Gets the number of unique ids in the dataset for all the pathways
+        :param pathway_ids: a list of pathway ids
+        :return: a list of count of unique ids in the dataset for all the pathways
+        """
+        counts = []
+        for pathway_id in pathway_ids:
+            if pathway_id in self.dataset_pathways:  # get all the formulas of the pathway in the dataset
+                unique_ids = self.pathway_to_unique_ids_dict[pathway_id].intersection(self.dataset_unique_ids)
+                counts.append(len(unique_ids))
             else:
-                num_totalF.append(0)
-        return num_totalF
+                counts.append(0)
+        return counts
 
     def get_comparison_samples(self, comp):
         conditions = [comp['control'], comp['case']]
