@@ -10,15 +10,21 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from sklearn import preprocessing
 
-NUM_RESAMPLES = 500
+NUM_RESAMPLES = 1000
 
 
 class PALS(object):
 
     # The constructor just takes in the analysis and defines the project
-    def __init__(self, data_source, min_intensity=5000, num_resamples=NUM_RESAMPLES):
+    def __init__(self, data_source, min_replace=5000, num_resamples=NUM_RESAMPLES):
+        """
+        Creates a PALS analysis
+        :param data_source: a DataSource object
+        :param min_replace: replace a group with all zero values with this min intensity
+        :param num_resamples: the number of times to resample p-values
+        """
         self.data_source = data_source
-        self.min_intensity = min_intensity  # replace a group with all zero values with this min intensity
+        self.min_replace = min_replace
         self.num_resamples = num_resamples
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
@@ -31,10 +37,12 @@ class PALS(object):
     # public methods
     ####################################################################################################################
 
-    """Main method to perform pathway analysis
-    :returns: a dataframe containing pathway analysis results"""
-
     def get_pathway_df(self, resample=False):
+        """
+        Main method to perform pathway analysis
+        :param resample: whether to perform resampling
+        :return: a dataframe containing pathway analysis results
+        """
         activity_df = self.get_plage_activity_df()
         if resample:
             plage_df = self.set_up_resample_plage_p_df(activity_df)
@@ -43,18 +51,21 @@ class PALS(object):
         pathway_df = self.calculate_hg_values(plage_df)
         return pathway_df
 
-    """ Method to get setup and return the pathway activity dataframe
-    :returns: Dataframe of pathways (rows), samples (columns) and the calulated activity from SVD
-    """
-
     def get_plage_activity_df(self):
-        int_df = self._standardize_intensity_df(self.data_source.int_df)
-        plage_activity_df = self._calculate_pathway_activity_df(int_df)
-        return plage_activity_df
-
-    """Obtains a plage dataframe with resampling"""
+        """
+        Performs data normalisation and computes the PLAGE activity dataframe
+        :return: PLAGE activity dataframe
+        """
+        measurement_df = self._standardize_intensity_df(self.data_source.measurement_df)
+        activity_df = self._calculate_pathway_activity_df(measurement_df)
+        return activity_df
 
     def set_up_resample_plage_p_df(self, activity_df):
+        """
+        Obtains a PLAGE dataframe with resampling
+        :param activity_df: a PLAGE activity dataframe
+        :return: a dataframe with resampled pvalues
+        """
         logger.info("Calculating plage p-values with resampling")
         all_pvalues = [activity_df.index, activity_df['pw name']]
         column_names = ['pw_name']
@@ -85,27 +96,27 @@ class PALS(object):
         t_test_filled = t_test.fillna(1.0)
 
         mapids = t_test_filled.index.values.tolist()
-        cov_df = self.calculate_coverage_df(mapids)
+        cov_df = self._calculate_coverage_df(mapids)
         coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
 
         # Merge the two dfs together
         pathway_df = pd.merge(t_test_filled, coverage_df, left_index=True, right_index=True, how='outer')
         return pathway_df
 
-    """ Set up a df containing mapids, pathway names and plage p-values for
-    each comparison along with the Formula coverage for a dataset.
-    Param: An activity matrix from the PLAGE analysis
-    Returns: A dataframe containing the above parameters,
-    """
-
     def set_up_plage_p_df(self, activity_df):
+        """
+        Obtains a PLAGE dataframe (without resampling)
+        :param activity_df: a PLAGE activity dataframe
+        :return: a df containing mapids, pathway names and plage p-values for each comparison along with the
+        Formula coverage for a dataset
+        """
         logger.info("Calculating plage p-values")
         t_test_list = []
         for pathway, row in activity_df.iterrows():
             name = row[0]
             path_params = [pathway, name]
             column_names = ['pw_name']
-            for comp in self.comparisons:
+            for comp in self.data_source.comparisons:
                 comparison_samples = self.data_source.get_comparison_samples(comp)
                 condition_1 = comparison_samples[0]
                 condition_2 = comparison_samples[1]
@@ -121,30 +132,37 @@ class PALS(object):
         t_test_filled = t_test.fillna(1.0)
 
         mapids = t_test_filled.index.values.tolist()
-        cov_df = self.calculate_coverage_df(mapids)
+        cov_df = self._calculate_coverage_df(mapids)
         coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
 
         # Merge the two dfs together
         pathway_df = pd.merge(t_test_filled, coverage_df, left_index=True, right_index=True, how='outer')
         return pathway_df
 
-    """ A method to add the hypegeometric p-values to the pathway df
-        Params: The df containing the plage scores and coverage for a pathway
-        Returns: The pathway_df with the hg scores and combined p-values added.
-    """
-
     def calculate_hg_values(self, pathway_df):
+        """
+        Adds hypegeometric p-values to the pathway df
+        :param pathway_df: a dataframe containing PLAGE scores and coverage for pathways
+        :return: pathway_df with the hg scores and combined p-values added
+        """
         logger.info("Calculating the hyper-geometric p-values")
         # Calculate the hg scores and create a temporary df to merge with the main df
         p_value_list = []
         mapids = pathway_df.index.values.tolist()
-        kegg_pw_f, ds_pw_f = self.data_source.get_unique_pw_f()
 
         for mp in mapids:
             tot_pw_f = pathway_df.loc[mp]['unq_pw_F']
             formula_detected = pathway_df.loc[mp]['tot_ds_F']
-            sf = self.get_sf(formula_detected, kegg_pw_f, tot_pw_f + self.PW_F_OFFSET, ds_pw_f)
-            exp_value = hypergeom.mean(kegg_pw_f, tot_pw_f, ds_pw_f).round(2)
+            k = formula_detected
+            M = self.data_source.pathway_unique_ids_count
+            n = tot_pw_f + self.PW_F_OFFSET
+            N = self.data_source.pathway_dataset_unique_ids_count
+            sf = hypergeom.sf(k, M, n, N)
+
+            exp_value = hypergeom.mean(
+                self.data_source.pathway_unique_ids_count,
+                tot_pw_f,
+                self.data_source.pathway_dataset_unique_ids_count).round(2)
             p_value_list.append([mp, sf, exp_value])
 
         p_value = pd.DataFrame(p_value_list)
@@ -182,91 +200,83 @@ class PALS(object):
                                     how='outer')
         return pathway_df_final
 
-    """Writes dataframe as csv"""
-
-    def write_df(self, title, df, suffix=''):
-        filename = title + suffix + '.csv'
-        df.to_csv(filename)
-        logger.info("Your file has been written to: %s ", filename)
-
     ####################################################################################################################
     # private methods
     ####################################################################################################################
 
-    """Method to set the zero values in a DF and standardize across the samples
-    :param: int_df: Dataframe of peak intensites (raw)
-    :returns: DF with zero intensities replaced and the values standardized
-    """
-
-    def _standardize_intensity_df(self, int_df):
+    def _standardize_intensity_df(self, measurement_df):
+        """
+        Standardize measurement dataframe by filling in missing values and standardizing across samples
+        :param measurement_df: Dataframe of measured intensites (raw)
+        :return: DF with zero intensities replaced and the values standardized
+        """
         # Change the 0.00 intensities in the matrix to useable values
-        int_df = self._change_zero_peak_ints(int_df)
-
-        logger.debug("Scaling the data across the sample: zero mean and unit variance")
+        measurement_df = self._change_zero_peak_ints(measurement_df)
 
         # standardize the data across the samples (zero mean and unit variance))
-        scaled_data = np.log(np.array(int_df))
+        logger.debug("Scaling the data across the sample: zero mean and unit variance")
+        scaled_data = np.log(np.array(measurement_df))
         mean_std = np.mean(np.std(scaled_data, axis=1))
         scaled_data = preprocessing.scale(scaled_data, axis=1) * mean_std
+
         # Put the scaled data back into df for further use
-        sample_names = int_df.columns
-        int_df[sample_names] = scaled_data
+        sample_names = measurement_df.columns
+        measurement_df[sample_names] = scaled_data
 
         # Standardizing, testing data
-        mean = np.round(int_df.values.mean(axis=1))
-        variance = np.round(int_df.values.std(axis=1))
+        mean = np.round(measurement_df.values.mean(axis=1))
+        variance = np.round(measurement_df.values.std(axis=1))
         logger.debug("Mean values of the rows in the DF is %s" % str(mean))
         logger.debug("Variance in the rows of the DF is %s" % str(variance))
-        return int_df
+        return measurement_df
 
-    """ A method to change a 'zero' entries in a dataframe.
-    If all intensities in a (factor) group are zero, a min value is set.
-    If there are > 1 and < number in group zero intensities, then the average of the non_zeros entries is calculated
-    and used. Assuming the PiMP mzXML file names are unique
-    :param peak_int_df: A dataframe of peak intensities with peak ids (rows) and samples (columns)
-    :returns: No return, modifies peak_int_df.
-    """
-
-    def _change_zero_peak_ints(self, peak_int_df):
+    def _change_zero_peak_ints(self, measurement_df):
+        """
+        A method to change a 'zero' entries in a dataframe.
+        If all intensities in a (factor) group are zero, a min value is set.
+        If there are > 1 and < number in group zero intensities, then the average of the non_zeros entries is calculated
+        and used. Assuming the PiMP mzXML file names are unique
+        :param measurement_df: A dataframe of peak intensities with peak ids (rows) and samples (columns)
+        :return: No return, modifies peak_int_df.
+        """
         # Get the min_intensity value set for the analysis
         logger.debug("Setting the zero intensity values in the dataframe")
         # Replace 0.0 with NaN for easier operations ahead
-        peak_int_df[peak_int_df == 0.0] = None
+        measurement_df[measurement_df == 0.0] = None
         for group_name, samples in self.data_source.groups.items():
             # If all zero in group then replace with minimum
-            peak_int_df.loc[peak_int_df.loc[:, samples].isnull().all(axis=1), samples] = self.min_intensity
+            measurement_df.loc[measurement_df.loc[:, samples].isnull().all(axis=1), samples] = self.min_replace
 
             # Replace any other zeros with mean of group
-            subset_df = peak_int_df.loc[:, samples]
-            peak_int_df.loc[:, samples] = subset_df.mask(subset_df.isnull(), subset_df.mean(axis=1), axis=0)
-        return peak_int_df
+            subset_df = measurement_df.loc[:, samples]
+            measurement_df.loc[:, samples] = subset_df.mask(subset_df.isnull(), subset_df.mean(axis=1), axis=0)
+        return measurement_df
 
-    """ Method to calculate the pathway activity DF given a dataframe of standardized intensities
-    :param int_df: Takes in a standardized dataframe (of peak intensites)
-    :returns: A DF with Pathway names (rows) and the SVD activity levels for the samples (columns)
-    """
-
-    def _calculate_pathway_activity_df(self, int_df):
-        pathways = self.data_source.ds_pathways
+    def _calculate_pathway_activity_df(self, measurement_df):
+        """
+        Calculates the pathway activity DF given a dataframe of standardized intensities
+        :param measurement_df: a standardized dataframe (of peak intensites)
+        :return: a DF with Pathway names (rows) and the SVD activity levels for the samples (columns)
+        """
+        pathways = self.data_source.dataset_pathways
 
         # For all of the pathways get all of the peak IDs
         pathway_activities = []
         pw_names = []
         for pw in pathways:
-            peak_ids = self.data_source.ds_pathways_peak_ids[pw]
-            pathway_peaks = int_df.loc[peak_ids] / np.sqrt(len(peak_ids))  # DF selected from peak IDs.
-            w, d, c = np.linalg.svd(np.array(pathway_peaks))
+            row_ids = self.data_source.dataset_pathways_to_row_ids[pw]
+            pathway_data = measurement_df.loc[row_ids] / np.sqrt(len(row_ids))  # DF selected from peak IDs.
+            w, d, c = np.linalg.svd(np.array(pathway_data))
 
-            pw_name = self.data_source.pathway_dict[pw]
+            pw_name = self.data_source.pathway_dict[pw]['display_name']
             pw_act_list = []
             pw_act_list.append(pw)
             pw_names.append(pw_name)
             pw_act_list.extend(list(c[0] * d[0]))
-
             pathway_activities.append(pw_act_list)
 
             activity_df = pd.DataFrame(pathway_activities).set_index([0])
-            activity_df.columns = int_df.columns
+            activity_df.columns = measurement_df.columns
             activity_df.index.name = "Pathway ids"
             activity_df.insert(0, 'pw name', pw_names)
         return activity_df
@@ -278,13 +288,26 @@ class PALS(object):
         slist2 = l[len(list1):len(l)]
         return slist1, slist2
 
+    @staticmethod
+    def _tstats(a):
+        m = np.mean(a, axis=1)
+        n = a.shape[1]
+        var = np.sum(np.square(a - m[:, np.newaxis]), axis=1) / (n - 1)
+
+        return m, n, var
+
     def _calculate_t_values(self, activity_df, condition_1, condition_2):
-        tvalues = []
-        for pathway in activity_df.index:
-            c1 = activity_df.loc[pathway, condition_1].values
-            c2 = activity_df.loc[pathway, condition_2].values
-            tvalues.append(list(ttest_ind(c1, c2))[0])
-        return (tvalues)
+
+        c1 = activity_df.loc[:, condition_1].values
+        c2 = activity_df.loc[:, condition_2].values
+
+        m1, n1, var1 = PALS._tstats(c1)
+        m2, n2, var2 = PALS._tstats(c2)
+
+        se_total = np.sqrt(var1 / n1 + var2 / n2)
+        tvalues = (m1 - m2) / se_total
+
+        return tvalues
 
     def _compare_resamples(self, tvalues, null_max_tvalues, null_min_tvalues):
         pvalues = []
@@ -295,18 +318,18 @@ class PALS(object):
             pvalues.append(pvalue)
         return pvalues
 
-    """ Calculate the Formula coverage for a dataset.
-        Param: The Mapids for the pathways to be used
-        Returns: A dataframe containing the number of unique formulae for a pathway, along with those
+    def _calculate_coverage_df(self, mapids):
+        """
+        Calculate the Formula coverage for a dataset.
+        :param mapids: The Mapids for the pathways to be used
+        :return: A dataframe containing the number of unique formulae for a pathway, along with those
         annotated, identified and the total unique Fomulae in each pathway.
-    """
-
-    def calculate_coverage_df(self, mapids):
+        """
         logger.info("Calculating dataset formula coverage")
 
         # num_formula: Stores the number of unqique kegg formulae for a pathway
-        num_formula = self.data_source.get_pw_unique_F(mapids)
-        num_totalF = self.data_source.get_ds_pw_compounds(mapids)
+        num_formula = self.data_source.get_pathway_unique_counts(mapids)
+        num_totalF = self.data_source.get_pathway_dataset_unique_counts(mapids)
 
         # unq_pw_f: unique formula expected for a pathway
         # tot_ds_F: unique formula for a pathway in a dataset
@@ -319,10 +342,3 @@ class PALS(object):
         for_df['F_coverage'] = (((for_df['tot_ds_F']) / for_df['unq_pw_F']) * 100).round(2)
 
         return for_df
-
-    # Get the Hypergeometric p-value
-    def get_sf(self, formula_dectected, kegg_pw_f, tot_pw_f, ds_pw_f):
-        [k, M, n, N] = [formula_dectected, kegg_pw_f, tot_pw_f, ds_pw_f]
-        prb = hypergeom.sf(k, M, n, N)
-        # print "This would suggest that there is a ", prb, "chance that ",formula_detected, "or greater metabolites would be detected randomly"
-        return prb
