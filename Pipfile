@@ -17,11 +17,13 @@ biopython = "*"
 loguru = "*"
 xmltodict = "*"
 requests = "*"
-rpy2 = {version = "*", sys_platform = "!= 'win32'"}
-rpy2_win = {path = "./whl/rpy2-2.9.5-cp37-cp37m-win_amd64.whl", sys_platform = "== 'win32'"}
+rpy2 = {version = "*",sys_platform = "!= 'win32'"}
+rpy2_win = {path = "./whl/rpy2-2.9.5-cp37-cp37m-win_amd64.whl",sys_platform = "== 'win32'"}
 qtconsole = "*"
 pyqt5 = "*"
 neo4j-driver = "*"
+bioservices = "*"
+tzlocal = "*"
 
 [dev-packages]
 
