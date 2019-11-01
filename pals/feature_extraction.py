@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from loguru import logger
 
-from common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, load_json
+from common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, load_json, DATABASE_REACTOME_CHEBI
 
 
 class DataSource(object):
@@ -27,16 +27,12 @@ class DataSource(object):
 
         # load compound and pathway database information from file
         data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        if database_name == DATABASE_PIMP_KEGG:
-            # PiMP exported pathways for KEGG
-            json_file = os.path.join(data_dir, '%s.json' % DATABASE_PIMP_KEGG)
-
-        elif database_name == DATABASE_REACTOME_KEGG:
-            # reactome exported pathways for KEGG
-            if reactome_metabolic_pathway_only:
-                json_file = os.path.join(data_dir, 'reactome', 'metabolic_pathways', 'KEGG', '%s.json.zip' % reactome_species)
-            else:
-                json_file = os.path.join(data_dir, 'reactome', 'all_pathways', 'KEGG', '%s.json.zip' % reactome_species)
+        metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
+        if database_name == DATABASE_PIMP_KEGG: # PiMP exported pathways for KEGG
+            json_file = os.path.join(data_dir, '%s.json.zip' % DATABASE_PIMP_KEGG)
+        else:
+            json_file = os.path.join(data_dir, 'reactome', metabolic_pathway_dir, database_name,
+                                     '%s.json.zip' % reactome_species)
 
         json_file = os.path.abspath(json_file)
         logger.debug('Loading %s' % json_file)
