@@ -37,7 +37,7 @@ class PALS(object):
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, resample=False):
+    def get_pathway_df(self, resample=True):
         """
         Main method to perform pathway analysis
         :param resample: whether to perform resampling
