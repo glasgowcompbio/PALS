@@ -37,13 +37,13 @@ class PALS(object):
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, resample=True):
+    def get_pathway_df(self, resample=True, standardize=True):
         """
         Main method to perform pathway analysis
         :param resample: whether to perform resampling
         :return: a dataframe containing pathway analysis results
         """
-        activity_df = self.get_plage_activity_df()
+        activity_df = self.get_plage_activity_df(standardize)
         if resample:
             plage_df = self.set_up_resample_plage_p_df(activity_df)
         else:
@@ -51,12 +51,22 @@ class PALS(object):
         pathway_df = self.calculate_hg_values(plage_df)
         return pathway_df
 
-    def get_plage_activity_df(self):
+    def get_plage_activity_df(self, standardize=True):
         """
         Performs data normalisation and computes the PLAGE activity dataframe
         :return: PLAGE activity dataframe
         """
-        measurement_df = self._standardize_intensity_df(self.data_source.measurement_df)
+        if standardize:
+            measurement_df = self._standardize_intensity_df(self.data_source.measurement_df)
+        else:
+            measurement_df = self.data_source.measurement_df
+
+        # Standardizing, testing data
+        mean = np.round(measurement_df.values.mean(axis=1))
+        variance = np.round(measurement_df.values.std(axis=1))
+        logger.debug("Mean values of the rows in the DF is %s" % str(mean))
+        logger.debug("Variance in the rows of the DF is %s" % str(variance))
+
         activity_df = self._calculate_pathway_activity_df(measurement_df)
         return activity_df
 
@@ -222,12 +232,6 @@ class PALS(object):
         # Put the scaled data back into df for further use
         sample_names = measurement_df.columns
         measurement_df[sample_names] = scaled_data
-
-        # Standardizing, testing data
-        mean = np.round(measurement_df.values.mean(axis=1))
-        variance = np.round(measurement_df.values.std(axis=1))
-        logger.debug("Mean values of the rows in the DF is %s" % str(mean))
-        logger.debug("Variance in the rows of the DF is %s" % str(variance))
         return measurement_df
 
     def _change_zero_peak_ints(self, measurement_df):
