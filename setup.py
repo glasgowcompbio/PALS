@@ -1,12 +1,20 @@
-from distutils.core import setup
-setup(
-  name = 'PALS',
-  packages = ['PALS'], # this must be the same as the name above
-  version = '1.0',
-  description = 'Pathway-level Analysis of Metabolites Expression Data.',
-  author = 'Joe Wandy',
-  author_email = 'joe.wandy@glasgow.ac.uk',
-  url = 'https://github.com/glasgowcompbio/PALS', # use the URL to the github repo
-  keywords = ['pathway', 'metabolomics'], # arbitrary keywords
-  classifiers = [],
+import setuptools
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name="PALS-pathway",
+    version="1.0.0",
+    author="Joe Wandy",
+    author_email="joe.wandy@glasgow.ac.uk",
+    description="Pathway-level Analysis of Metabolites Expression Data",
+    url="https://github.com/glasgowcompbio/PALS",
+    packages=setuptools.find_packages(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires='>=3.6',
 )
