@@ -22,6 +22,7 @@ class DataSource(object):
         """
         self.measurement_df = measurement_df.copy()
         self.experimental_design = experimental_design
+        self.database_name = database_name
         self.groups = dict(self.experimental_design['groups'].items())
         self.comparisons = self.experimental_design['comparisons']
 
