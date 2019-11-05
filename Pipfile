@@ -13,19 +13,16 @@ scikit-learn = "*"
 matplotlib = "*"
 statsmodels = "*"
 jupyter = "*"
-biopython = "*"
 loguru = "*"
-xmltodict = "*"
 requests = "*"
+neo4j-driver = "*"
+
+[dev-packages]
 rpy2 = {version = "*",sys_platform = "!= 'win32'"}
 rpy2_win = {path = "./whl/rpy2-2.9.5-cp37-cp37m-win_amd64.whl",sys_platform = "== 'win32'"}
 qtconsole = "*"
 pyqt5 = "*"
-neo4j-driver = "*"
-bioservices = "*"
 tzlocal = "*"
-
-[dev-packages]
 
 [requires]
 python_version = "3"
