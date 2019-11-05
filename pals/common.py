@@ -1,5 +1,6 @@
 import gzip
 import json
+import os
 
 DATABASE_PIMP_KEGG = 'PiMP_KEGG'
 DATABASE_REACTOME_KEGG = 'COMPOUND'
@@ -21,6 +22,8 @@ REACTOME_SPECIES_ORYZA_SATIVA = 'Oryza sativa'
 REACTOME_SPECIES_RATTUS_NORVEGICUS = 'Rattus norvegicus'
 REACTOME_SPECIES_SACCHAROMYCES_CEREVISIAE = 'Saccharomyces cerevisiae'
 REACTOME_SPECIES_SUS_SCROFA = 'Sus scrofa'
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 def load_json(json_file, compressed=False):
     if compressed:

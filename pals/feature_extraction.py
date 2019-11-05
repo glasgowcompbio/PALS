@@ -4,13 +4,14 @@ from collections import defaultdict
 
 from loguru import logger
 
-from common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, load_json, DATABASE_REACTOME_CHEBI
+from common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, load_json, DATABASE_REACTOME_CHEBI, DATA_DIR
+from reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict
 
 
 class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
-                 reactome_species=None, reactome_metabolic_pathway_only=True):
+                 reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name
@@ -27,20 +28,30 @@ class DataSource(object):
         self.comparisons = self.experimental_design['comparisons']
 
         # load compound and pathway database information from file
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
         if database_name == DATABASE_PIMP_KEGG: # PiMP exported pathways for KEGG
-            json_file = os.path.join(data_dir, '%s.json.zip' % DATABASE_PIMP_KEGG)
-        else:
-            json_file = os.path.join(data_dir, 'reactome', metabolic_pathway_dir, database_name,
-                                     '%s.json.zip' % reactome_species)
-
-        json_file = os.path.abspath(json_file)
-        logger.debug('Loading %s' % json_file)
-        try:
-            data = load_json(json_file)
-        except UnicodeDecodeError: # maybe the file is compressed?
+            json_file = os.path.abspath(os.path.join(DATA_DIR, '%s.json.zip' % DATABASE_PIMP_KEGG))
+            logger.debug('Loading %s' % json_file)
             data = load_json(json_file, compressed=True)
+
+        else: # must be using reactome
+            if not reactome_query: # load data from previously dumped reactome information
+                metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
+                json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
+                                         '%s.json.zip' % reactome_species)
+                logger.debug('Loading %s' % json_file)
+                data = load_json(json_file, compressed=True)
+
+            else: # fetch reactome data from neo4j
+                logger.debug('Retrieving data for %s from Reactome %s metabolic_pathway_only=%s' %
+                             (reactome_species, database_name, reactome_metabolic_pathway_only))
+                pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
+                mapping_dict = get_compound_mapping_dict(reactome_species, database_name, reactome_metabolic_pathway_only)
+                entity_dict = load_entity_dict(database_name)
+                data = {
+                    'pathway_dict': pathway_dict,
+                    'entity_dict': entity_dict,
+                    'mapping_dict': mapping_dict
+                }
 
         # mapid -> pathway name
         self.pathway_dict = data['pathway_dict']
