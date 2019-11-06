@@ -1,9 +1,9 @@
 import json
 import os
 
+import numpy as np
 import pandas as pd
 import requests
-import numpy as np
 
 PIMP_HOST = 'polyomics.mvls.gla.ac.uk'
 
@@ -68,11 +68,11 @@ def get_experimental_design(token, host, analysis_id):
 
 def get_formula_df(token, host, analysis_id, database_name='kegg', polarity='positive'):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
-    ms1_df['identified'] = ms1_df['identified'].astype('bool') # convert identified column ('True', 'False') to boolean
+    ms1_df['identified'] = ms1_df['identified'].astype('bool')  # convert identified column ('True', 'False') to boolean
     ms1_df = ms1_df[ms1_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
     # ms1_df = ms1_df[ms1_df['polarity'] == polarity] # filter by polarity, e.g. 'positive'
 
-    ms1_df.rename(columns={ 'pid': 'row_id', 'identifier': 'entity_id' }, inplace=True)
+    ms1_df.rename(columns={'pid': 'row_id', 'identifier': 'entity_id'}, inplace=True)
     ms1_df = ms1_df.set_index('row_id')
 
     # select only peaks that have been (identified) or (annotated with adduct type M+H and M-H).

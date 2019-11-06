@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from neo4j import GraphDatabase, basic_auth
 
-from common import DATA_DIR, DATABASE_PIMP_KEGG, load_json, save_json, DATABASE_REACTOME_KEGG
+from .common import DATA_DIR, load_json, save_json
 
 NEO4J_SERVER = 'bolt://localhost:7687'
 NEO4J_USER = 'neo4j'

@@ -1,11 +1,10 @@
-import json
 import os
 from collections import defaultdict
 
 from loguru import logger
 
-from common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, load_json, DATABASE_REACTOME_CHEBI, DATA_DIR
-from reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict
+from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR
+from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict
 
 
 class DataSource(object):
@@ -28,33 +27,34 @@ class DataSource(object):
         self.comparisons = self.experimental_design['comparisons']
 
         # load compound and pathway database information from file
-        if database_name == DATABASE_PIMP_KEGG: # PiMP exported pathways for KEGG
+        if database_name == DATABASE_PIMP_KEGG:  # PiMP exported pathways for KEGG
             json_file = os.path.abspath(os.path.join(DATA_DIR, '%s.json.zip' % DATABASE_PIMP_KEGG))
             logger.debug('Loading %s' % json_file)
             data = load_json(json_file, compressed=True)
 
-        else: # must be using reactome
-            if not reactome_query: # load data from previously dumped reactome information
+        else:  # must be using reactome
+            if not reactome_query:  # load data from previously dumped reactome information
                 metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
                 json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
                                          '%s.json.zip' % reactome_species)
                 logger.debug('Loading %s' % json_file)
                 data = load_json(json_file, compressed=True)
 
-            else: # fetch reactome data from neo4j
+            else:  # fetch reactome data from neo4j
                 logger.debug('Retrieving data for %s from Reactome %s metabolic_pathway_only=%s' %
                              (reactome_species, database_name, reactome_metabolic_pathway_only))
                 pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
-                mapping_dict = get_compound_mapping_dict(reactome_species, database_name, reactome_metabolic_pathway_only)
+                mapping_dict = get_compound_mapping_dict(reactome_species, database_name,
+                                                         reactome_metabolic_pathway_only)
                 entity_dict = load_entity_dict(database_name)
                 data = {
                     'pathway_dict': pathway_dict,
                     'entity_dict': entity_dict,
                     'mapping_dict': mapping_dict
                 }
-        self.pathway_dict = data['pathway_dict'] # mapid -> pathway name
-        self.entity_dict = data['entity_dict'] # compound id -> formula
-        self.mapping_dict = data['mapping_dict'] # compound id -> [ mapids ]
+        self.pathway_dict = data['pathway_dict']  # mapid -> pathway name
+        self.entity_dict = data['entity_dict']  # compound id -> formula
+        self.mapping_dict = data['mapping_dict']  # compound id -> [ mapids ]
 
         # map between pathway id to compound ids and formulas
         logger.debug('Mapping pathway to unique ids')
