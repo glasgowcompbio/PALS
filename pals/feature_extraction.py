@@ -52,17 +52,12 @@ class DataSource(object):
                     'entity_dict': entity_dict,
                     'mapping_dict': mapping_dict
                 }
-
-        # mapid -> pathway name
-        self.pathway_dict = data['pathway_dict']
-
-        # compound id -> formula, extracted from xml file
-        self.entity_dict = data['entity_dict']
-
-        # compound id -> [ mapids ], extracted from rdata file
-        self.mapping_dict = data['mapping_dict']
+        self.pathway_dict = data['pathway_dict'] # mapid -> pathway name
+        self.entity_dict = data['entity_dict'] # compound id -> formula
+        self.mapping_dict = data['mapping_dict'] # compound id -> [ mapids ]
 
         # map between pathway id to compound ids and formulas
+        logger.debug('Mapping pathway to unique ids')
         pathway_to_unique_ids_dict = defaultdict(set)  # mapid -> [ formulas ]
         for entity_id, pathway_ids in self.mapping_dict.items():
             try:
@@ -76,21 +71,24 @@ class DataSource(object):
         self.pathway_to_unique_ids_dict = dict(pathway_to_unique_ids_dict)
 
         # a dataframe of peak id, originating database name, database id, formula
+        logger.debug('Creating dataset to pathway mapping')
         dataset_pathways = []
         dataset_pathways_to_row_ids = defaultdict(list)
         dataset_unique_ids = []
         for row_id, row in annotation_df.iterrows():
             entity_id = row['entity_id']
-            # convert entity id to unique id if possible
-            unique_id = self._get_unique_id(entity_id)
-            dataset_unique_ids.append(unique_id)
-            # get the mapping between dataset pathway to row ids
             try:
+                # convert entity id to unique id if possible
+                unique_id = self._get_unique_id(entity_id)
+                dataset_unique_ids.append(unique_id)
+                # get the mapping between dataset pathway to row ids
                 possible_pathways = self.mapping_dict[entity_id]
                 dataset_pathways.extend(possible_pathways)
                 for p in possible_pathways:
                     dataset_pathways_to_row_ids[p].append(row_id)
-            except KeyError:  # no information about compound -> pathway in our database
+            except KeyError:
+                # no unique id found for this entity id, OR
+                # no information about compound -> pathway in our database
                 continue
         self.dataset_pathways = set(dataset_pathways)
         self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
@@ -98,6 +96,7 @@ class DataSource(object):
 
         # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
         # and the number of unique formulas in the ds and in pathways
+        logger.debug('Computing unique id counts')
         self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
         self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
 
