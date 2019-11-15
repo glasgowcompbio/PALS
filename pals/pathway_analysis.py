@@ -280,10 +280,10 @@ class PALS(object):
             pw_act_list.extend(list(c[0] * d[0]))
             pathway_activities.append(pw_act_list)
 
-            activity_df = pd.DataFrame(pathway_activities).set_index([0])
-            activity_df.columns = measurement_df.columns
-            activity_df.index.name = "Pathway ids"
-            activity_df.insert(0, 'pw name', pw_names)
+        activity_df = pd.DataFrame(pathway_activities).set_index([0])
+        activity_df.columns = measurement_df.columns
+        activity_df.index.name = "Pathway ids"
+        activity_df.insert(0, 'pw name', pw_names)
         return activity_df
 
     def _permute_two_lists(self, list1, list2):
