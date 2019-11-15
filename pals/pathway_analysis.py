@@ -191,7 +191,7 @@ class PALS(object):
 
         # Make a combined_p df to merge with the main df
         combine_p_list = []
-        column_names = ['%s %s %s' % (self.data_source.database_name, comp['name'], ' comb_p')
+        column_names = ['%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
                         for comp in self.data_source.comparisons]
         for mp in mapids:
             combine_p_pathway = [mp]

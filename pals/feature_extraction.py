@@ -49,7 +49,8 @@ class DataSource(object):
                 }
             else:
                 # we didn't dump the data for all pathways. Only for the metabolic pathways only this can be used.
-                assert(reactome_metabolic_pathway_only, 'Pathway information is not available. Please use live reactome query.')
+                if reactome_metabolic_pathway_only:
+                    raise ValueError('Pathway information is not available. Please use live reactome query')
                 metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
                 json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
                                          '%s.json.zip' % reactome_species)
@@ -182,7 +183,7 @@ class DataSource(object):
         all_entity_ids = set(self.entity_dict.keys())  # all entity ids in database
         pathway_entity_ids = set(self.mapping_dict.keys())  # all entity ids found in pathways
         entity_ids_in_pathways = all_entity_ids.intersection(pathway_entity_ids)
-        pathway_unique_ids = set([self.entity_dict[entity_id]['unique_id'] for entity_id in entity_ids_in_pathways])
+        pathway_unique_ids = set([self._get_unique_id(entity_id) for entity_id in entity_ids_in_pathways])
         return pathway_unique_ids
 
     def _get_pathway_dataset_unique_ids(self):
