@@ -2,15 +2,33 @@ import os
 import re
 from collections import defaultdict
 
+from loguru import logger
 from neo4j import GraphDatabase, basic_auth
 
 from .common import DATA_DIR, load_json, save_json
 
-NEO4J_SERVER = 'bolt://localhost:7687'
-NEO4J_USER = 'neo4j'
-NEO4J_PASSWORD = 'neo4j'
-driver = GraphDatabase.driver(NEO4J_SERVER,
-                              auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
+
+def get_neo4j_driver():
+    NEO4J_SERVER = os.getenv('NEO4J_SERVER', 'bolt://localhost:7687')
+    if 'NEO4J_SERVER' not in os.environ:
+        logger.warning('Using a default neo4j server: %s' % NEO4J_SERVER)
+
+    NEO4J_USER = os.getenv('NEO4J_USER', 'neo4j')
+    NEO4J_PASSWORD = os.getenv('NEO4J_PASSWORD', 'neo4j')
+    if 'NEO4J_USER' not in os.environ or 'NEO4J_PASSWORD' not in os.environ:
+        logger.warning('Using a default neo4j username or password: %s' % NEO4J_USER)
+
+    try:
+        neo4j_driver = GraphDatabase.driver(NEO4J_SERVER,
+                                            auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
+        logger.info('Created graph database driver for %s (%s)' % (NEO4J_SERVER, NEO4J_USER))
+        return neo4j_driver
+    except Exception as e:
+        logger.warning('Failed to connect to graph database: %s' % str(e))
+        raise e
+
+
+driver = get_neo4j_driver()
 
 
 def get_neo4j_session():

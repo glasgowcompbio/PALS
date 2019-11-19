@@ -10,18 +10,21 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from sklearn import preprocessing
 
-NUM_RESAMPLES = 1000
+from .common import PW_F_OFFSET, MIN_REPLACE, NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT
 
 
 class PALS(object):
 
     # The constructor just takes in the analysis and defines the project
-    def __init__(self, data_source, min_replace=5000, num_resamples=NUM_RESAMPLES):
+    def __init__(self, data_source, min_replace=MIN_REPLACE, num_resamples=NUM_RESAMPLES,
+                 plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
         :param min_replace: replace a group with all zero values with this min intensity
         :param num_resamples: the number of times to resample p-values
+        :param plage_weight: the weight for PLAGE (intensity) component when combining p-values
+        :param hg_weight: the weight for hypergeometric component when combining p-values
         """
         self.data_source = data_source
         self.min_replace = min_replace
@@ -29,9 +32,8 @@ class PALS(object):
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
         # subsequently effects all of the subsequent calculations
-        self.PW_F_OFFSET = 1
-        self.PLAGE_WEIGHT = 5
-        self.HG_WEIGHT = 1
+        self.plage_weight = plage_weight
+        self.hg_weight = hg_weight
 
     ####################################################################################################################
     # public methods
@@ -165,7 +167,7 @@ class PALS(object):
             formula_detected = pathway_df.loc[mp]['tot_ds_F']
             k = formula_detected
             M = self.data_source.pathway_unique_ids_count
-            n = tot_pw_f + self.PW_F_OFFSET
+            n = tot_pw_f + PW_F_OFFSET
             N = self.data_source.pathway_dataset_unique_ids_count
             sf = hypergeom.sf(k, M, n, N)
 
@@ -199,7 +201,7 @@ class PALS(object):
                 p_value_colname = comp['name'] + ' p-value'
                 p_value = pathway_df_merge.loc[mp][p_value_colname]
                 sf = pathway_df_merge.loc[mp]['sf']
-                com_p = combine_pvalues([p_value, sf], 'stouffer', [self.PLAGE_WEIGHT, self.HG_WEIGHT])
+                com_p = combine_pvalues([p_value, sf], 'stouffer', [self.plage_weight, self.hg_weight])
                 combine_p_pathway.append(com_p[1])
             combine_p_list.append(combine_p_pathway)
 
