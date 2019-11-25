@@ -49,7 +49,7 @@ class DataSource(object):
                 }
             else:
                 # we didn't dump the data for all pathways. Only for the metabolic pathways only this can be used.
-                if reactome_metabolic_pathway_only:
+                if not reactome_metabolic_pathway_only:
                     raise ValueError('Pathway information is not available. Please use live reactome query')
                 metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
                 json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,

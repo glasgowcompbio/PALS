@@ -66,7 +66,7 @@ def get_experimental_design(token, host, analysis_id):
     return payload
 
 
-def get_formula_df(token, host, analysis_id, database_name='kegg', polarity='positive'):
+def get_annotation_df(token, host, analysis_id, database_name='kegg', polarity='positive'):
     ms1_df = get_ms1_peaks(token, host, analysis_id)
     ms1_df['identified'] = ms1_df['identified'].astype('bool')  # convert identified column ('True', 'False') to boolean
     ms1_df = ms1_df[ms1_df['db'] == database_name]  # filter by db name, e.g. 'kegg'
