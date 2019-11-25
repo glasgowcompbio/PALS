@@ -312,6 +312,7 @@ class PALS(object):
         m2, n2, var2 = PALS._tstats(c2)
 
         se_total = np.sqrt(var1 / n1 + var2 / n2)
+        se_total[se_total == 0.0] = np.nan
         tvalues = (m1 - m2) / se_total
 
         return tvalues
