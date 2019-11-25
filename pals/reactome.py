@@ -28,8 +28,10 @@ def get_neo4j_driver():
         raise e
 
 
-driver = get_neo4j_driver()
-
+try:
+    driver = get_neo4j_driver()
+except Exception as e:
+    logger.warning('Driver initialisation failed. PALS will run without Reactome support.')
 
 def get_neo4j_session():
     session = None
