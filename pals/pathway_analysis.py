@@ -229,8 +229,7 @@ class PALS(object):
         # standardize the data across the samples (zero mean and unit variance))
         logger.debug("Scaling the data across the sample: zero mean and unit variance")
         scaled_data = np.log(np.array(measurement_df))
-        mean_std = np.mean(np.std(scaled_data, axis=1))
-        scaled_data = preprocessing.scale(scaled_data, axis=1) * mean_std
+        scaled_data = preprocessing.scale(scaled_data, axis=1)
 
         # Put the scaled data back into df for further use
         sample_names = measurement_df.columns
