@@ -45,7 +45,8 @@ class PALS(object):
         :param resample: whether to perform resampling
         :return: a dataframe containing pathway analysis results
         """
-        activity_df = self.get_plage_activity_df(standardize)
+        measurement_df = self.data_source.get_measurements()
+        activity_df = self.get_plage_activity_df(measurement_df, standardize)
         if resample:
             plage_df = self.set_up_resample_plage_p_df(activity_df)
         else:
@@ -53,15 +54,13 @@ class PALS(object):
         pathway_df = self.calculate_hg_values(plage_df)
         return pathway_df
 
-    def get_plage_activity_df(self, standardize=True):
+    def get_plage_activity_df(self, measurement_df, standardize=True):
         """
         Performs data normalisation and computes the PLAGE activity dataframe
         :return: PLAGE activity dataframe
         """
         if standardize:
-            measurement_df = self._standardize_intensity_df(self.data_source.measurement_df)
-        else:
-            measurement_df = self.data_source.measurement_df
+            measurement_df = self._standardize_intensity_df(measurement_df)
 
         # Standardizing, testing data
         mean = np.round(measurement_df.values.mean(axis=1))

@@ -22,7 +22,7 @@ class DataSource(object):
         :param experimental_design: a dictionary specifying the experimental design
         :param database_name: the database name (with .json extension) used to load database in the data folder
         """
-        self.measurement_df = measurement_df.copy()
+        self.measurement_df = measurement_df
         self.experimental_design = experimental_design
         self.database_name = database_name
         self.groups = dict(self.experimental_design['groups'].items())
@@ -124,6 +124,9 @@ class DataSource(object):
         logger.debug('Computing unique id counts')
         self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
         self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
+
+    def get_measurements(self):
+        return self.measurement_df.copy()
 
     def get_pathway_unique_counts(self, pathway_ids):
         """
