@@ -41,7 +41,11 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
                     pathway_df = pals.get_pathway_df()
 
                     # store the results
-                    results[n_sample].append(pathway_df)
+                    item = {
+                        'data': ds_resampled,
+                        'result': pathway_df
+                    }
+                    results[n_sample].append(item)
 
                 except Warning:
                     # to handle
@@ -82,13 +86,15 @@ def evaluate_performance(results, experiment_name, threshold, N):
 
     # evaluate PALS results
     logger.debug('Evaluating partial results')
-    method = 'pals'
-    pals = res['pals']
+    method = 'PALS'
+    pals = res[method]
     performances = []
     n_samples = pals.keys()
     for n_sample in n_samples:
         for i in range(len(pals[n_sample])):
-            df = pals[n_sample][i]
+            item = pals[n_sample][i]
+            data = item['data']
+            df = item['result']
             partial = _select_significant_entries(df, significant_column, N, threshold)
             performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
 
