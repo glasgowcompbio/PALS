@@ -77,7 +77,7 @@ class PALS(object):
         :param activity_df: a PLAGE activity dataframe
         :return: a dataframe with resampled pvalues
         """
-        logger.info("Calculating plage p-values with resampling")
+        logger.debug("Calculating plage p-values with resampling")
         all_pvalues = [activity_df.index, activity_df['pw name']]
         column_names = ['pw_name']
         for comp in self.data_source.comparisons:
@@ -156,7 +156,7 @@ class PALS(object):
         :param pathway_df: a dataframe containing PLAGE scores and coverage for pathways
         :return: pathway_df with the hg scores and combined p-values added
         """
-        logger.info("Calculating the hyper-geometric p-values")
+        logger.debug("Calculating the hyper-geometric p-values")
         # Calculate the hg scores and create a temporary df to merge with the main df
         p_value_list = []
         mapids = pathway_df.index.values.tolist()
@@ -188,7 +188,7 @@ class PALS(object):
         pathway_df_merge['Ex_Cov'] = ((pathway_df_merge['exp_F']) / pathway_df_merge['unq_pw_F']) * 100
         pathway_df_merge.Ex_Cov = pathway_df_merge.Ex_Cov.round(2)
 
-        logger.info("Calculating the combined p-values")
+        logger.debug("Calculating the combined p-values")
 
         # Make a combined_p df to merge with the main df
         combine_p_list = []
@@ -331,7 +331,7 @@ class PALS(object):
         :return: A dataframe containing the number of unique formulae for a pathway, along with those
         annotated, identified and the total unique Fomulae in each pathway.
         """
-        logger.info("Calculating dataset formula coverage")
+        logger.debug("Calculating dataset formula coverage")
 
         # num_formula: Stores the number of unqique kegg formulae for a pathway
         num_formula = self.data_source.get_pathway_unique_counts(mapids)
