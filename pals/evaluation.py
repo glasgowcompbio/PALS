@@ -1,7 +1,56 @@
+import warnings
+
 import pandas as pd
 from loguru import logger
 
 from .pathway_analysis import PALS
+
+
+def run_experiment(experiment_name, data_source, case, control, n_samples, significant_column, n_iter):
+    res = {
+        'experiment_name': experiment_name,
+        'data_source': data_source,
+        'case': case,
+        'control': control,
+        'n_samples': n_samples,
+        'n_iter': n_iter,
+        'significant_column': significant_column,
+        'PALS': None,
+        'ORA': None
+    }
+
+    # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
+    results = {}
+    for n_sample in n_samples:
+        results[n_sample] = []
+        while len(results[n_sample]) < n_iter:
+
+            # https://stackoverflow.com/questions/15933741/how-do-i-catch-a-numpy-warning-like-its-an-exception-not-just-for-testing
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error')
+
+                try:
+                    # resample columns and generate a data source from it
+                    i = len(results[n_sample])
+                    logger.info('n_sample=%d iter=%d PALS experiment=%s case=%s control=%s' % (
+                    n_sample, i, experiment_name, case, control))
+                    ds_resampled = data_source.resample(case, control, n_sample)
+
+                    # run PALS on the resampled data
+                    pals = PALS(ds_resampled)
+                    pathway_df = pals.get_pathway_df()
+
+                    # store the results
+                    results[n_sample].append(pathway_df)
+
+                except Warning:
+                    # to handle
+                    # "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
+                    # The standard deviation of the data is probably very close to 0."
+                    logger.warning('Failed to generate good data, will try again')
+
+    res['PALS'] = results
+    return res
 
 
 def evaluate_performance(results, experiment_name, threshold, N):
