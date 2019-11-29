@@ -107,11 +107,13 @@ class DataSource(object):
         dataset_pathways = []
         dataset_pathways_to_row_ids = defaultdict(list)
         dataset_unique_ids = []
+        dataset_row_id_to_unique_ids = defaultdict(set)
         for row_id, row in annotation_df.iterrows():
             entity_id = row['entity_id']
             try:
                 # convert entity id to unique id if possible
                 unique_id = self._get_unique_id(entity_id)
+                dataset_row_id_to_unique_ids[row_id].add(unique_id)
                 dataset_unique_ids.append(unique_id)
                 # get the mapping between dataset pathway to row ids
                 possible_pathways = self.mapping_dict[entity_id]
@@ -125,6 +127,7 @@ class DataSource(object):
         self.dataset_pathways = set(dataset_pathways)
         self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
         self.dataset_unique_ids = set(dataset_unique_ids)
+        self.dataset_row_id_to_unique_ids = dataset_row_id_to_unique_ids
 
         # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
         # and the number of unique formulas in the ds and in pathways

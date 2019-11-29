@@ -39,11 +39,85 @@ class PALS(object):
     # public methods
     ####################################################################################################################
 
+    def get_ora_df(self):
+        """
+        Main method to perform over-representation (ORA) analysis
+        :return: a dataframe containing pathway analysis results from ORA
+        """
+        measurement_df = self.data_source.get_measurements()
+        measurement_df = self._change_zero_peak_ints(measurement_df)
+        scaled_data = np.log(np.array(measurement_df))
+
+        # Put the scaled data back into df for further use
+        sample_names = measurement_df.columns
+        measurement_df[sample_names] = scaled_data
+
+        # For all of the pathways get all of the peak IDs
+        t_test_list = []
+        pathways = self.data_source.dataset_pathways
+        for pw in pathways:
+            pathway_row_ids = self.data_source.dataset_pathways_to_row_ids[pw]
+            pw_name = self.data_source.pathway_dict[pw]['display_name']
+            path_params = [pw, pw_name]
+            column_names = ['mapids', 'pw_name']
+            for comp in self.data_source.comparisons:
+                # identify differentially expressed peaks
+                comparison_samples = self.data_source.get_comparison_samples(comp)
+                condition_1 = comparison_samples[0]
+                condition_2 = comparison_samples[1]
+                c1 = measurement_df.loc[pathway_row_ids, condition_1].values
+                c2 = measurement_df.loc[pathway_row_ids, condition_2].values
+                statistics, p_value = ttest_ind(c1, c2, axis=1)
+                assert len(p_value) == len(pathway_row_ids)
+
+                # TODO: can be improved
+                formula_detected_list = []
+                for i in range(len(p_value)):
+                    row_id = pathway_row_ids[i]
+                    p = p_value[i]
+                    if p > 0.05:
+                        peak_formulae = list(self.data_source.dataset_row_id_to_unique_ids[row_id])
+                        formula_detected_list.extend(peak_formulae)
+
+                tot_pw_f = len(self.data_source.pathway_to_unique_ids_dict[pw])
+                formula_detected = len(set(formula_detected_list))
+                k = formula_detected
+                M = self.data_source.pathway_unique_ids_count
+                n = tot_pw_f + PW_F_OFFSET
+                N = self.data_source.pathway_dataset_unique_ids_count
+                sf = hypergeom.sf(k, M, n, N)
+
+                # the combined p-value column is just the same as the p-value since there's nothing to combine
+                comb_p_value = sf
+                item = (sf, comb_p_value)
+                path_params.extend(item)
+
+                # column names are computed is in the loop, but actually we only need it to be computed once
+                col_name = comp['name'] + ' p-value'
+                comb_col_name = '%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+                item = (col_name, comb_col_name)
+                column_names.extend(item)
+
+            t_test_list.append(path_params)
+
+        t_test = pd.DataFrame(t_test_list, columns=column_names).set_index(['mapids'])
+        t_test.index.name = 'mapids'
+        t_test_filled = t_test.fillna(1.0)
+
+        mapids = t_test_filled.index.values.tolist()
+        cov_df = self._calculate_coverage_df(mapids)
+        coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
+
+        # Merge the two dfs together
+        pathway_df = pd.merge(t_test_filled, coverage_df, left_index=True, right_index=True, how='outer')
+        return pathway_df
+
     def get_pathway_df(self, resample=True, standardize=True):
         """
         Main method to perform pathway analysis
         :param resample: whether to perform resampling
-        :return: a dataframe containing pathway analysis results
+        :param standardize: whether to standardize data
+        :return: a dataframe containing pathway analysis results from PALS
         """
         measurement_df = self.data_source.get_measurements()
         activity_df = self.get_plage_activity_df(measurement_df, standardize)
