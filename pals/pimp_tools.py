@@ -107,3 +107,10 @@ def get_annotation_df(token, host, analysis_id, database_name='kegg', polarity='
     # select only the column we need
     formula_df = formula_df[['entity_id']]
     return formula_df
+
+
+def download_from_pimp(token, hostname, analysis_id, database_name):
+    int_df = get_ms1_intensities(token, hostname, analysis_id)
+    annotation_df = get_annotation_df(token, hostname, analysis_id, database_name)
+    experimental_design = get_experimental_design(token, hostname, analysis_id)
+    return int_df, annotation_df, experimental_design
