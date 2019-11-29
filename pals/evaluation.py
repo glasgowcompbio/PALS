@@ -93,7 +93,8 @@ def evaluate_performance(results, experiment_name, threshold, N):
     for n_sample in n_samples:
         for i in range(len(pals[n_sample])):
             item = pals[n_sample][i]
-            data = item['data']
+            # data = item['data'] # TOO BIG!!
+            data = None
             df = item['result']
             partial = _select_significant_entries(df, significant_column, N, threshold)
             performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
