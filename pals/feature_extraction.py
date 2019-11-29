@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 
+import pandas as pd
 from loguru import logger
 
 from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
@@ -23,8 +24,13 @@ class DataSource(object):
         :param database_name: the database name (with .json extension) used to load database in the data folder
         """
         self.measurement_df = measurement_df
+        self.annotation_df = annotation_df
         self.experimental_design = experimental_design
         self.database_name = database_name
+        self.reactome_species = reactome_species
+        self.reactome_metabolic_pathway_only = reactome_metabolic_pathway_only
+        self.reactome_query = reactome_query
+
         self.groups = dict(self.experimental_design['groups'].items())
         self.comparisons = self.experimental_design['comparisons']
 
@@ -35,7 +41,7 @@ class DataSource(object):
             data = load_json(json_file, compressed=True)
 
         elif database_name == DATABASE_REACTOME_KEGG or database_name == DATABASE_REACTOME_CHEBI:  # must be using reactome
-            if reactome_query: # fetch reactome data from neo4j
+            if reactome_query:  # fetch reactome data from neo4j
                 logger.debug('Retrieving data for %s from Reactome %s metabolic_pathway_only=%s' %
                              (reactome_species, database_name, reactome_metabolic_pathway_only))
                 pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
@@ -50,7 +56,8 @@ class DataSource(object):
             else:
                 # we didn't dump the data for all pathways. Only for the metabolic pathways only this can be used.
                 if not reactome_metabolic_pathway_only:
-                    raise ValueError('Pathway information is not available. Please use live reactome query with --connect_to_reactome_server.')
+                    raise ValueError(
+                        'Pathway information is not available. Please use live reactome query with --connect_to_reactome_server.')
                 metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
                 json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
                                          '%s.json.zip' % reactome_species)
@@ -128,6 +135,12 @@ class DataSource(object):
     def get_measurements(self):
         return self.measurement_df.copy()
 
+    def get_annotations(self):
+        return self.annotation_df.copy()
+
+    def get_experimental_design(self):
+        return self.experimental_design.copy()
+
     def get_pathway_unique_counts(self, pathway_ids):
         """
         Returns the number of unique ids associated to each pathway
@@ -164,6 +177,48 @@ class DataSource(object):
         conditions = [comp['control'], comp['case']]
         condition_samples = list(map(lambda group_name: self.groups[group_name], conditions))
         return condition_samples
+
+    def resample(self, case, control, n_sample):
+        """
+        Resamples columns for performance evaluation
+        :param case: the case label
+        :param control: the control label
+        :param n_sample: the number of columns to sample
+        :return: a new DataSource object containing the new resampled data
+        """
+        df = self.get_measurements()
+        annotations = self.get_annotations()
+        samples_case = self.groups[case]
+        samples_control = self.groups[control]
+
+        # sample n_samples columns without replacement
+        intensities_case = df[samples_case].sample(n_sample, axis=1, replace=False)
+        intensities_control = df[samples_control].sample(n_sample, axis=1, replace=False)
+
+        # combined the sampled case and control dataframes together
+        combined_df = pd.concat([intensities_case, intensities_control], axis=1)
+
+        # sample the entire dataframe again to randomise the column order
+        shuffled_df = combined_df.sample(frac=1, axis=1)
+
+        # create a filtered experimental design
+        selected_samples = set(shuffled_df.columns.values.tolist())
+        experimental_design = {
+            'comparisons': [{
+                'case': case,
+                'control': control,
+                'name': '%s/%s' % (case, control)
+            }],
+            'groups': {
+                case: list(set(samples_case).intersection(selected_samples)),
+                control: list(set(samples_control).intersection((selected_samples)))
+            }
+        }
+
+        # return a new DataSource
+        new_ds = DataSource(shuffled_df, annotations, experimental_design, self.database_name,
+                            self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
+        return new_ds
 
     def _get_unique_id(self, entity_id):
         """
