@@ -15,23 +15,17 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
         'n_samples': n_samples,
         'n_iter': n_iter,
         'significant_column': significant_column,
-        'PALS': None,
-        'ORA': None
+        'experiment_results': {}
     }
 
     # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
-    results = {}
+    experiment_results = res['experiment_results']
     for n_sample in n_samples:
-        results[n_sample] = []
-        while len(results[n_sample]) < n_iter:
-
-            # https://stackoverflow.com/questions/15933741/how-do-i-catch-a-numpy-warning-like-its-an-exception-not-just-for-testing
-            with warnings.catch_warnings():
-                warnings.filterwarnings('error')
-
+        experiment_results[n_sample] = [] # to track the length of the resampled results
+        while len(experiment_results[n_sample]) < n_iter: # keep generating data until n_iter
                 try:
                     # resample columns and generate a data source from it
-                    i = len(results[n_sample])
+                    i = len(experiment_results[n_sample])
                     logger.info('n_sample=%d iter=%d PALS experiment=%s case=%s control=%s' % (
                     n_sample, i, experiment_name, case, control))
                     ds_resampled = data_source.resample(case, control, n_sample)
@@ -39,21 +33,18 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
                     # run PALS on the resampled data
                     pals = PALS(ds_resampled)
                     pathway_df = pals.get_pathway_df()
+                    ora_df = pals.get_ora_df()
 
                     # store the results
                     item = {
-                        'data': ds_resampled,
-                        'result': pathway_df
+                        # 'data': ds_resampled, # TOO BIG!!
+                        'PALS': pathway_df,
+                        'ORA': ora_df
                     }
-                    results[n_sample].append(item)
+                    experiment_results[n_sample].append(item)
+                except UserWarning as e:
+                    logger.warning('Failed to generate good data due to %s, will try again' % (str(e)))
 
-                except Warning:
-                    # to handle
-                    # "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
-                    # The standard deviation of the data is probably very close to 0."
-                    logger.warning('Failed to generate good data, will try again')
-
-    res['PALS'] = results
     return res
 
 
@@ -76,27 +67,38 @@ def evaluate_performance(results, experiment_name, threshold, N):
     """
     logger.debug('Generating PALS full results')
     res = results[experiment_name]
-    ds = res['data_source']
     significant_column = res['significant_column']
-
-    # generate full results
+    experiment_results = res['experiment_results']
+    ds = res['data_source']
     pals = PALS(ds)
-    pathway_df = pals.get_pathway_df()
-    full = _select_significant_entries(pathway_df, significant_column, N, threshold)
-
-    # evaluate PALS results
-    logger.debug('Evaluating partial results')
-    method = 'PALS'
-    pals = res[method]
     performances = []
-    n_samples = pals.keys()
+
+    # generate PALS full results
+    method = 'PALS'
+    pals_full_df = pals.get_pathway_df()
+    ora_full_df = pals.get_ora_df()
+    pals_full = _select_significant_entries(pals_full_df, significant_column, N, threshold)
+    ora_full = _select_significant_entries(ora_full_df, significant_column, N, threshold)
+
+    # evaluate the partial results w.r.t to the full results
+    logger.debug('Evaluating partial results')
+    n_samples = list(experiment_results.keys())
     for n_sample in n_samples:
-        for i in range(len(pals[n_sample])):
-            item = pals[n_sample][i]
-            # data = item['data'] # TOO BIG!!
-            data = None
-            df = item['result']
-            partial = _select_significant_entries(df, significant_column, N, threshold)
+        iterations = range(len(experiment_results[n_sample]))
+        for i in iterations:
+            logger.debug('n_sample %d iteration %d' % (n_sample, i))
+            item = experiment_results[n_sample][i]
+            # for PALS
+            method = 'PALS'
+            full = pals_full
+            partial_df = item[method]
+            partial = _select_significant_entries(partial_df, significant_column, N, threshold)
+            performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
+            # for ORA
+            method = 'ORA'
+            full = ora_full
+            partial_df = item[method]
+            partial = _select_significant_entries(partial_df, significant_column, N, threshold)
             performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
 
     logger.debug('Done!')
