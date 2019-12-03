@@ -181,7 +181,7 @@ class DataSource(object):
         condition_samples = list(map(lambda group_name: self.groups[group_name], conditions))
         return condition_samples
 
-    def resample(self, case, control, n_sample):
+    def resample(self, n_sample, case=None, control=None, axis=0):
         """
         Resamples columns for performance evaluation
         :param case: the case label
@@ -189,38 +189,48 @@ class DataSource(object):
         :param n_sample: the number of columns to sample
         :return: a new DataSource object containing the new resampled data
         """
-        df = self.get_measurements()
-        annotations = self.get_annotations()
-        samples_case = self.groups[case]
-        samples_control = self.groups[control]
+        measurement_df = self.get_measurements()
+        annotation_df = self.get_annotations()
+        if axis == 0:
+            sampled_measurement_df = measurement_df.sample(n_sample, axis=0, replace=False)
+            sampled_annotation_df = annotation_df[annotation_df.index.isin(sampled_measurement_df.index)]
+            experimental_design = self.get_experimental_design()
+            new_ds = DataSource(sampled_measurement_df, sampled_annotation_df, experimental_design, self.database_name,
+                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
 
-        # sample n_samples columns without replacement
-        intensities_case = df[samples_case].sample(n_sample, axis=1, replace=False)
-        intensities_control = df[samples_control].sample(n_sample, axis=1, replace=False)
+        elif axis == 1:
+            assert case is not None, 'Case is required'
+            assert control is not None, 'Control is required'
+            samples_case = self.groups[case]
+            samples_control = self.groups[control]
 
-        # combined the sampled case and control dataframes together
-        combined_df = pd.concat([intensities_case, intensities_control], axis=1)
+            # sample n_samples columns without replacement
+            intensities_case = measurement_df[samples_case].sample(n_sample, axis=1, replace=False)
+            intensities_control = measurement_df[samples_control].sample(n_sample, axis=1, replace=False)
 
-        # sample the entire dataframe again to randomise the column order
-        shuffled_df = combined_df.sample(frac=1, axis=1)
+            # combined the sampled case and control dataframes together
+            combined_df = pd.concat([intensities_case, intensities_control], axis=1)
 
-        # create a filtered experimental design
-        selected_samples = set(shuffled_df.columns.values.tolist())
-        experimental_design = {
-            'comparisons': [{
-                'case': case,
-                'control': control,
-                'name': '%s/%s' % (case, control)
-            }],
-            'groups': {
-                case: list(set(samples_case).intersection(selected_samples)),
-                control: list(set(samples_control).intersection((selected_samples)))
+            # sample the entire dataframe again to randomise the column order
+            shuffled_df = combined_df.sample(frac=1, axis=1)
+
+            # create a filtered experimental design
+            selected_samples = set(shuffled_df.columns.values.tolist())
+            experimental_design = {
+                'comparisons': [{
+                    'case': case,
+                    'control': control,
+                    'name': '%s/%s' % (case, control)
+                }],
+                'groups': {
+                    case: list(set(samples_case).intersection(selected_samples)),
+                    control: list(set(samples_control).intersection((selected_samples)))
+                }
             }
-        }
 
-        # return a new DataSource
-        new_ds = DataSource(shuffled_df, annotations, experimental_design, self.database_name,
-                            self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
+            # return a new DataSource
+            new_ds = DataSource(shuffled_df, annotation_df, experimental_design, self.database_name,
+                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
         return new_ds
 
     def _get_unique_id(self, entity_id):
