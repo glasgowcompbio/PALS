@@ -57,6 +57,7 @@ class PALS(object):
         measurement_df[sample_names] = scaled_data
 
         # For all of the pathways get all of the peak IDs
+        assert len(self.data_source.dataset_pathways) > 0, 'No pathways found in the dataset'
         t_test_list = []
         pathways = self.data_source.dataset_pathways
         for pw in pathways:

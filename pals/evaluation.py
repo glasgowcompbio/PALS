@@ -118,9 +118,12 @@ def _select_significant_entries(pathway_df, significant_column, N, threshold):
 def _compute_prec_rec_f1(full, partial):
     pathways_full = set(full.index.values)
     pathways_partial = set(partial.index.values)
-    TP = len(pathways_full.intersection(pathways_partial))
-    FP = len(pathways_partial - pathways_full)
-    FN = len(pathways_full - pathways_partial)
+    TP_items = pathways_full.intersection(pathways_partial)
+    FP_items = pathways_partial - pathways_full
+    FN_items = pathways_full - pathways_partial
+    TP = len(TP_items)
+    FP = len(FP_items)
+    FN = len(FN_items)
     prec = 0
     rec = 0
     f1 = 0
@@ -130,4 +133,7 @@ def _compute_prec_rec_f1(full, partial):
         f1 = (2 * prec * rec) / (prec + rec)
     except:
         logger.warning('Something wrong!! TP=%d FP=%d FN=%d prec=%f rec=%f f1=%f' % (TP, FP, FN, prec, rec, f1))
+    logger.debug('TP_items = %s' % TP_items)
+    logger.debug('FP_items = %s' % FP_items)
+    logger.debug('FN_items = %s' % FN_items)
     return TP, FP, FN, prec, rec, f1
