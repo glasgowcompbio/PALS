@@ -73,29 +73,23 @@ class PALS(object):
                 # Perform hypergeometric test to assess the significance of finding formulae from dataset in the pathway
                 # of interest. Parameters:
                 # M = population size = the number of unique formulae found in database AND found in all the pathways
-                # n = the number of success in the population = the number of unique formulae that are found in the
-                #     pathway of interest
-                # N = sample size = the number of unique formulae found in database AND also found in all the pathways
-                #     AND also found significantly changing in the dataset
-                # k = the number of drawn success = the number of unique formulae found in the pathway of interest AND
-                #     also in found significantly changing in the dataset
-
-                # Identify differentially expressed formulae in the pathway of interest to calculate k
-                formula_detected = self._get_significant_formulae(condition_1, condition_2, measurement_df,
-                                                                  pathway_row_ids)
-                k = len(formula_detected)
+                # n = the number of success in the population = the number of differentially expressed entities in M
+                # N = sample size = the number of unique formulae found in database AND found in the pathway of interest
+                # k = the number of drawn success = the number of differentially expressed entities in N
 
                 M = self.data_source.pathway_unique_ids_count
-
-                tot_pw_f = len(self.data_source.pathway_to_unique_ids_dict[pw])
-                n = tot_pw_f + PW_F_OFFSET
-
-                # We also need this to calculate N
-                # TODO: should be computed just once outside the loop
                 significant_formulae = self._get_significant_formulae(condition_1, condition_2, measurement_df)
-                N = len(self.data_source._get_pathway_dataset_unique_ids().intersection(significant_formulae))
 
-                sf = hypergeom.sf(k, M, n, N)
+                n = len(self.data_source._get_pathway_unique_ids().intersection(significant_formulae))
+
+                pw_ds_f = self.data_source.pathway_to_unique_ids_dict[pw]
+                N = len(pw_ds_f)
+
+                k = len(pw_ds_f.intersection(significant_formulae))
+
+                # https://github.com/scipy/scipy/issues/7837
+                sf = hypergeom.sf(k-1, M, n, N)
+                # logger.debug('M=%d n=%d N=%d k=%d sf=%f' % (M, n, N, k, sf))
 
                 # the combined p-value column is just the same as the p-value since there's nothing to combine
                 item = (sf, )
@@ -167,7 +161,7 @@ class PALS(object):
         for i in range(len(p_value)):
             row_id = pathway_row_ids[i]
             p = p_value[i]
-            if p > SIGNIFICANT_THRESHOLD:
+            if p < SIGNIFICANT_THRESHOLD:
                 peak_formulae = list(self.data_source.dataset_row_id_to_unique_ids[row_id])
                 formula_detected_list.extend(peak_formulae)
         return set(formula_detected_list)
