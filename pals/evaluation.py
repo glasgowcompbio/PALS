@@ -4,9 +4,11 @@ import pandas as pd
 from loguru import logger
 
 from .pathway_analysis import PALS
+from .common import SIGNIFICANT_THRESHOLD
 
 
-def run_experiment(experiment_name, data_source, case, control, n_samples, significant_column, n_iter):
+def run_experiment(experiment_name, data_source, case, control, n_samples, significant_column, n_iter,
+                   plage_weight, hg_weight):
     res = {
         'experiment_name': experiment_name,
         'data_source': data_source,
@@ -15,7 +17,9 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
         'n_samples': n_samples,
         'n_iter': n_iter,
         'significant_column': significant_column,
-        'experiment_results': {}
+        'experiment_results': {},
+        'plage_weight': plage_weight,
+        'hg_weight': hg_weight
     }
 
     # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
@@ -28,10 +32,10 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
                     i = len(experiment_results[n_sample])
                     logger.info('n_sample=%d iter=%d PALS experiment=%s case=%s control=%s' % (
                     n_sample, i, experiment_name, case, control))
-                    ds_resampled = data_source.resample(case, control, n_sample)
+                    ds_resampled = data_source.resample(n_sample, case=case, control=control, axis=1)
 
                     # run PALS on the resampled data
-                    pals = PALS(ds_resampled)
+                    pals = PALS(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight)
                     pathway_df = pals.get_pathway_df()
                     ora_df = pals.get_ora_df()
 
@@ -48,7 +52,7 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
     return res
 
 
-def evaluate_performance(results, experiment_name, threshold, N):
+def evaluate_performance(results, experiment_name, N):
     """
     Definition of precision and recall at N:
     Precision@N = (# of recommended items @N that are relevant) / (# of recommended items @N)
@@ -70,15 +74,17 @@ def evaluate_performance(results, experiment_name, threshold, N):
     significant_column = res['significant_column']
     experiment_results = res['experiment_results']
     ds = res['data_source']
-    pals = PALS(ds)
+    plage_weight = res['plage_weight']
+    hg_weight = res['hg_weight']
+    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
     performances = []
 
     # generate PALS full results
     method = 'PALS'
     pals_full_df = pals.get_pathway_df()
     ora_full_df = pals.get_ora_df()
-    pals_full = _select_significant_entries(pals_full_df, significant_column, N, threshold)
-    ora_full = _select_significant_entries(ora_full_df, significant_column, N, threshold)
+    pals_full = _select_significant_entries(pals_full_df, significant_column, N, SIGNIFICANT_THRESHOLD)
+    ora_full = _select_significant_entries(ora_full_df, significant_column, N, SIGNIFICANT_THRESHOLD)
 
     # evaluate the partial results w.r.t to the full results
     logger.debug('Evaluating partial results')
@@ -92,13 +98,13 @@ def evaluate_performance(results, experiment_name, threshold, N):
             method = 'PALS'
             full = pals_full
             partial_df = item[method]
-            partial = _select_significant_entries(partial_df, significant_column, N, threshold)
+            partial = _select_significant_entries(partial_df, significant_column, N, SIGNIFICANT_THRESHOLD)
             performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
             # for ORA
             method = 'ORA'
             full = ora_full
             partial_df = item[method]
-            partial = _select_significant_entries(partial_df, significant_column, N, threshold)
+            partial = _select_significant_entries(partial_df, significant_column, N, SIGNIFICANT_THRESHOLD)
             performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
 
     logger.debug('Done!')
@@ -132,8 +138,9 @@ def _compute_prec_rec_f1(full, partial):
         rec = TP / float(TP + FN)
         f1 = (2 * prec * rec) / (prec + rec)
     except:
-        logger.warning('Something wrong!! TP=%d FP=%d FN=%d prec=%f rec=%f f1=%f' % (TP, FP, FN, prec, rec, f1))
-    logger.debug('TP_items = %s' % TP_items)
-    logger.debug('FP_items = %s' % FP_items)
-    logger.debug('FN_items = %s' % FN_items)
+        pass
+        # logger.warning('Something wrong!! TP=%d FP=%d FN=%d prec=%f rec=%f f1=%f' % (TP, FP, FN, prec, rec, f1))
+    # logger.debug('TP_items = %s' % TP_items)
+    # logger.debug('FP_items = %s' % FP_items)
+    # logger.debug('FN_items = %s' % FN_items)
     return TP, FP, FN, prec, rec, f1
