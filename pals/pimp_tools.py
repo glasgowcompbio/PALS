@@ -1,11 +1,13 @@
 import json
 import os
+import tempfile
 
 import numpy as np
 import pandas as pd
 import requests
 from loguru import logger
 
+from pals.common import load_obj, save_obj
 
 PIMP_HOST = 'polyomics.mvls.gla.ac.uk'
 
@@ -112,7 +114,25 @@ def get_annotation_df(token, host, analysis_id, database_name='kegg', polarity='
 
 
 def download_from_pimp(token, hostname, analysis_id, database_name):
-    int_df = get_ms1_intensities(token, hostname, analysis_id)
-    annotation_df = get_annotation_df(token, hostname, analysis_id, database_name)
-    experimental_design = get_experimental_design(token, hostname, analysis_id)
+    temp_dir = tempfile.gettempdir()
+    filename = os.path.join(temp_dir, 'pimp_analysis_%d.p' % analysis_id)
+    logger.debug('Trying to load data from temp file: %s' % filename)
+
+    data = load_obj(filename)
+    if data is None:
+        logger.debug('Retrieving data for analysis %d from PiMP' % analysis_id)
+        int_df = get_ms1_intensities(token, hostname, analysis_id)
+        annotation_df = get_annotation_df(token, hostname, analysis_id, database_name)
+        experimental_design = get_experimental_design(token, hostname, analysis_id)
+        data = {
+            'int_df': int_df,
+            'annotation_df': annotation_df,
+            'experimental_design': experimental_design
+        }
+        logger.debug('Caching analysis data for next use')
+        save_obj(data, filename)
+    else:
+        int_df = data['int_df']
+        annotation_df = data['annotation_df']
+        experimental_design = data['experimental_design']
     return int_df, annotation_df, experimental_design
