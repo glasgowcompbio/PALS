@@ -56,7 +56,7 @@ def get_species_list():
         MATCH (n:Species) RETURN n.displayName AS name order by name        
         """
         query_res = session.run(query)
-        # print(query)
+        # logger.debug(query)
         for record in query_res:
             results.append(record['name'])
     finally:
@@ -97,7 +97,7 @@ def get_pathway_dict(species, metabolic_pathway_only=True, leaf=True):
             'species': species
         }
         query_res = session.run(query, params)
-        # print(query)
+        # logger.debug(query)
 
         for record in query_res:
             pathway_name = record['pathway_name']
@@ -146,7 +146,7 @@ def get_compound_mapping_dict(species, database_name, metabolic_pathway_only=Tru
             'database_name': database_name
         }
         query_res = session.run(query, params)
-        # print(query)
+        # logger.debug(query)
 
         i = 0
         for record in query_res:
@@ -197,7 +197,7 @@ def get_protein_mapping_dict(species, database_name, metabolic_pathway_only=True
             'species': species,
             'database_name': database_name
         }
-        print(query)
+        logger.debug(query)
         query_res = session.run(query, params)
 
         i = 0
@@ -249,7 +249,7 @@ def get_gene_mapping_dict(species, database_name, metabolic_pathway_only=True, l
             'species': species,
             'database_name': database_name
         }
-        print(query)
+        logger.debug(query)
         query_res = session.run(query, params)
 
         i = 0
@@ -301,7 +301,7 @@ def get_gene_mapping_dict(species, database_name, metabolic_pathway_only=True, l
             'species': species,
             'database_name': database_name
         }
-        print(query)
+        logger.debug(query)
         query_res = session.run(query, params)
 
         i = 0
@@ -386,7 +386,7 @@ def get_protein_entity_dict(species, database_name):
             'database_name': database_name
         }
         query_res = session.run(query, params)
-        print(query)
+        logger.debug(query)
 
         for record in query_res:
             entity_id = record['entity_id']
@@ -438,7 +438,7 @@ def get_gene_entity_dict(species, database_name):
             'database_name': database_name
         }
         query_res = session.run(query, params)
-        print(query)
+        logger.debug(query)
 
         for record in query_res:
             entity_id = record['entity_id']

@@ -1,8 +1,11 @@
 import gzip
 import json
+import logging
 import os
 import pathlib
 import pickle
+import sys
+
 from loguru import logger
 
 PW_F_OFFSET = 1
@@ -57,7 +60,7 @@ def save_json(data, json_file, compressed=False):
 
 def create_if_not_exist(out_dir):
     if not os.path.exists(out_dir) and len(out_dir) > 0:
-        print('Created %s' % out_dir)
+        logger.debug('Created %s' % out_dir)
         pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
 
 
@@ -70,7 +73,7 @@ def save_obj(obj, filename):
     """
     out_dir = os.path.dirname(filename)
     create_if_not_exist(out_dir)
-    print('Saving %s to %s' % (type(obj), filename))
+    logger.debug('Saving %s to %s' % (type(obj), filename))
     with gzip.GzipFile(filename, 'w') as f:
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -85,5 +88,20 @@ def load_obj(filename):
         with gzip.GzipFile(filename, 'rb') as f:
             return pickle.load(f)
     except OSError:
-        logger.getLogger().warning('Old, invalid or missing pickle in %s. Please regenerate this file.' % filename)
+        logger.warning('Old, invalid or missing pickle in %s. Please regenerate this file.' % filename)
         return None
+
+
+def set_log_level_warning():
+    logger.remove()
+    logger.add(sys.stderr, level=logging.WARNING)
+
+
+def set_log_level_info():
+    logger.remove()
+    logger.add(sys.stderr, level=logging.INFO)
+
+
+def set_log_level_debug():
+    logger.remove()
+    logger.add(sys.stderr, level=logging.DEBUG)

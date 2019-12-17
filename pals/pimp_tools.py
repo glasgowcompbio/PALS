@@ -4,6 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 import requests
+from loguru import logger
+
 
 PIMP_HOST = 'polyomics.mvls.gla.ac.uk'
 
@@ -26,7 +28,7 @@ def get_data(token, url, as_dataframe=False):
     with requests.Session() as s:
         s.headers.update(headers)
         r = s.get(url)
-        print(url, r)
+        logger.debug(url, r)
 
         # extract GET results
         if r.status_code == 200:
