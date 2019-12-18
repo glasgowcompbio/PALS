@@ -13,7 +13,7 @@ from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_d
 class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
-                 reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False):
+                 reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name
@@ -34,6 +34,67 @@ class DataSource(object):
         self.groups = dict(self.experimental_design['groups'].items())
         self.comparisons = self.experimental_design['comparisons']
 
+        if database is None:
+            logger.debug('Using %s as database' % database_name)
+            assert database_name is not None
+            self.database = self.get_database(database_name, reactome_metabolic_pathway_only, reactome_query,
+                                              reactome_species)
+        else:
+            logger.debug('Using user-provided database')
+            assert database_name is None
+            self.database = database
+        self.pathway_dict = self.database['pathway_dict']  # mapid -> pathway name
+        self.entity_dict = self.database['entity_dict']  # compound id -> formula
+        self.mapping_dict = self.database['mapping_dict']  # compound id -> [ mapids ]
+
+        # map between pathway id to compound ids and formulas
+        logger.debug('Mapping pathway to unique ids')
+        pathway_to_unique_ids_dict = defaultdict(set)  # mapid -> [ formulas ]
+        for entity_id, pathway_ids in self.mapping_dict.items():
+            try:
+                # if unique_id is present, then use it
+                # useful when we want to represent chemicals as formulae
+                unique_id = self._get_unique_id(entity_id)
+                for pathway_id in pathway_ids:
+                    pathway_to_unique_ids_dict[pathway_id].add(unique_id)
+            except KeyError:
+                continue  # TODO: skip this compound since we can't find its name or formula. Should never happen!!
+        self.pathway_to_unique_ids_dict = dict(pathway_to_unique_ids_dict)
+
+        # a dataframe of peak id, originating database name, database id, formula
+        logger.debug('Creating dataset to pathway mapping')
+        dataset_pathways = []
+        dataset_pathways_to_row_ids = defaultdict(list)
+        dataset_unique_ids = []
+        dataset_row_id_to_unique_ids = defaultdict(set)
+        for row_id, row in annotation_df.iterrows():
+            entity_id = row['entity_id']
+            try:
+                # convert entity id to unique id if possible
+                unique_id = self._get_unique_id(entity_id)
+                dataset_row_id_to_unique_ids[row_id].add(unique_id)
+                dataset_unique_ids.append(unique_id)
+                # get the mapping between dataset pathway to row ids
+                possible_pathways = self.mapping_dict[entity_id]
+                dataset_pathways.extend(possible_pathways)
+                for p in possible_pathways:
+                    dataset_pathways_to_row_ids[p].append(row_id)
+            except KeyError:
+                # no unique id found for this entity id, OR
+                # no information about compound -> pathway in our database
+                continue
+        self.dataset_pathways = set(dataset_pathways)
+        self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
+        self.dataset_unique_ids = set(dataset_unique_ids)
+        self.dataset_row_id_to_unique_ids = dataset_row_id_to_unique_ids
+
+        # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
+        # and the number of unique formulas in the ds and in pathways
+        logger.debug('Computing unique id counts')
+        self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
+        self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
+
+    def get_database(self, database_name, reactome_metabolic_pathway_only, reactome_query, reactome_species):
         # load compound and pathway database information from file
         if database_name == DATABASE_PIMP_KEGG:  # PiMP exported pathways for KEGG
             json_file = os.path.abspath(os.path.join(DATA_DIR, '%s.json.zip' % DATABASE_PIMP_KEGG))
@@ -83,57 +144,7 @@ class DataSource(object):
                 'entity_dict': entity_dict,
                 'mapping_dict': mapping_dict
             }
-
-        self.pathway_dict = data['pathway_dict']  # mapid -> pathway name
-        self.entity_dict = data['entity_dict']  # compound id -> formula
-        self.mapping_dict = data['mapping_dict']  # compound id -> [ mapids ]
-
-        # map between pathway id to compound ids and formulas
-        logger.debug('Mapping pathway to unique ids')
-        pathway_to_unique_ids_dict = defaultdict(set)  # mapid -> [ formulas ]
-        for entity_id, pathway_ids in self.mapping_dict.items():
-            try:
-                # if unique_id is present, then use it
-                # useful when we want to represent chemicals as formulae
-                unique_id = self._get_unique_id(entity_id)
-                for pathway_id in pathway_ids:
-                    pathway_to_unique_ids_dict[pathway_id].add(unique_id)
-            except KeyError:
-                continue  # TODO: skip this compound since we can't find its name or formula. Should never happen!!
-        self.pathway_to_unique_ids_dict = dict(pathway_to_unique_ids_dict)
-
-        # a dataframe of peak id, originating database name, database id, formula
-        logger.debug('Creating dataset to pathway mapping')
-        dataset_pathways = []
-        dataset_pathways_to_row_ids = defaultdict(list)
-        dataset_unique_ids = []
-        dataset_row_id_to_unique_ids = defaultdict(set)
-        for row_id, row in annotation_df.iterrows():
-            entity_id = row['entity_id']
-            try:
-                # convert entity id to unique id if possible
-                unique_id = self._get_unique_id(entity_id)
-                dataset_row_id_to_unique_ids[row_id].add(unique_id)
-                dataset_unique_ids.append(unique_id)
-                # get the mapping between dataset pathway to row ids
-                possible_pathways = self.mapping_dict[entity_id]
-                dataset_pathways.extend(possible_pathways)
-                for p in possible_pathways:
-                    dataset_pathways_to_row_ids[p].append(row_id)
-            except KeyError:
-                # no unique id found for this entity id, OR
-                # no information about compound -> pathway in our database
-                continue
-        self.dataset_pathways = set(dataset_pathways)
-        self.dataset_pathways_to_row_ids = dict(dataset_pathways_to_row_ids)
-        self.dataset_unique_ids = set(dataset_unique_ids)
-        self.dataset_row_id_to_unique_ids = dataset_row_id_to_unique_ids
-
-        # For use in the hypergeometric test - the number of unique formulas in kegg and in pathways
-        # and the number of unique formulas in the ds and in pathways
-        logger.debug('Computing unique id counts')
-        self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
-        self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
+        return data
 
     def get_measurements(self):
         return self.measurement_df.copy()
