@@ -303,6 +303,9 @@ class PALS(object):
             formula_detected = pathway_df.loc[mp]['tot_ds_F']
             k = formula_detected
             M = self.data_source.pathway_unique_ids_count
+
+            # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
+            # subsequently effects all of the subsequent calculations
             n = tot_pw_f + PW_F_OFFSET
             N = self.data_source.pathway_dataset_unique_ids_count
             sf = hypergeom.sf(k, M, n, N)
