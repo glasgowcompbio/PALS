@@ -111,7 +111,8 @@ class PALS(object):
         for comp in self.data_source.comparisons:
             # we use the combined p-value column name to store the p-values corrected after multiple testing
             col_name = comp['name'] + ' p-value'
-            comb_col_name = '%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+            db_name = '' if self.data_source.database_name is None else self.data_source.database_name
+            comb_col_name = '%s %s %s' % (db_name, comp['name'], 'comb_p')
 
             # copy the existing p-values
             pvalues = t_test[col_name].copy()
@@ -332,7 +333,8 @@ class PALS(object):
 
         # Make a combined_p df to merge with the main df
         combine_p_list = []
-        column_names = ['%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+        db_name = '' if self.data_source.database_name is None else self.data_source.database_name
+        column_names = ['%s %s %s' % (db_name, comp['name'], 'comb_p')
                         for comp in self.data_source.comparisons]
         for mp in mapids:
             combine_p_pathway = [mp]
