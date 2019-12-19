@@ -89,7 +89,7 @@ class PALS(object):
 
                 # https://github.com/scipy/scipy/issues/7837
                 sf = hypergeom.sf(k-1, M, n, N)
-                # logger.debug('M=%d n=%d N=%d k=%d sf=%f' % (M, n, N, k, sf))
+                logger.debug('pw=%s comp=%s M=%d n=%d N=%d k=%d sf=%f' % (pw, comp['name'], M, n, N, k, sf))
 
                 # the combined p-value column is just the same as the p-value since there's nothing to combine
                 item = (sf, )
@@ -111,8 +111,10 @@ class PALS(object):
         for comp in self.data_source.comparisons:
             # we use the combined p-value column name to store the p-values corrected after multiple testing
             col_name = comp['name'] + ' p-value'
-            db_name = '' if self.data_source.database_name is None else self.data_source.database_name
-            comb_col_name = '%s %s %s' % (db_name, comp['name'], 'comb_p')
+            if self.data_source.database_name is not None:
+                comb_col_name = '%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+            else:
+                comb_col_name = '%s %s' % (comp['name'], 'comb_p')
 
             # copy the existing p-values
             pvalues = t_test[col_name].copy()
@@ -333,9 +335,12 @@ class PALS(object):
 
         # Make a combined_p df to merge with the main df
         combine_p_list = []
-        db_name = '' if self.data_source.database_name is None else self.data_source.database_name
-        column_names = ['%s %s %s' % (db_name, comp['name'], 'comb_p')
-                        for comp in self.data_source.comparisons]
+        if self.data_source.database_name is not None:
+            column_names = ['%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+                            for comp in self.data_source.comparisons]
+        else:
+            column_names = ['%s %s' % (comp['name'], 'comb_p')
+                            for comp in self.data_source.comparisons]
         for mp in mapids:
             combine_p_pathway = [mp]
             for comp in self.data_source.comparisons:
