@@ -42,7 +42,7 @@ class PALS(object):
     # public methods
     ####################################################################################################################
 
-    def get_ora_df(self):
+    def get_ora_df(self, correct_multiple_tests=True):
         """
         Main method to perform over-representation (ORA) analysis
         :return: a dataframe containing pathway analysis results from ORA
@@ -106,7 +106,11 @@ class PALS(object):
         t_test.index.name = 'mapids'
 
         # correct for multiple testing
-        logger.debug('Correcting for multiple t-tests')
+        if correct_multiple_tests:
+            logger.debug('Correcting for multiple t-tests')
+        else:
+            logger.debug('Not correcting for multiple t-tests')
+            
         all_dfs = []
         for comp in self.data_source.comparisons:
             # we use the combined p-value column name to store the p-values corrected after multiple testing
@@ -118,19 +122,21 @@ class PALS(object):
 
             # copy the existing p-values
             pvalues = t_test[col_name].copy()
+            if correct_multiple_tests:
+                # check if any NaN, if yes exclude them
+                keep = pd.notnull(pvalues)
+                df = pvalues[keep]
 
-            # check if any NaN, if yes exclude them
-            keep = pd.notnull(pvalues)
-            df = pvalues[keep]
+                # perform multiple t-test corrections using FDR-BH
+                reject, pvals_corrected, _, _ = multipletests(df.values, method='fdr_bh')
 
-            # perform multiple t-test corrections using FDR-BH
-            reject, pvals_corrected, _, _ = multipletests(df.values, method='fdr_bh')
+                # set the results back, and rename the column
+                df.values[:] = pvals_corrected
+            else:
+                df = pvalues
 
-            # set the results back, and rename the column
-            df.values[:] = pvals_corrected
             df = pd.DataFrame(df)
             df = df.rename(columns={col_name: comb_col_name})
-
             all_dfs.append(df)
 
         # combine all the results across all comparisons
@@ -302,16 +308,21 @@ class PALS(object):
         mapids = pathway_df.index.values.tolist()
 
         for mp in mapids:
+            M = self.data_source.pathway_unique_ids_count
             tot_pw_f = pathway_df.loc[mp]['unq_pw_F']
+            n = tot_pw_f
+
+            N = self.data_source.pathway_dataset_unique_ids_count
             formula_detected = pathway_df.loc[mp]['tot_ds_F']
             k = formula_detected
-            M = self.data_source.pathway_unique_ids_count
 
             # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
             # subsequently effects all of the subsequent calculations
-            n = tot_pw_f + PW_F_OFFSET
-            N = self.data_source.pathway_dataset_unique_ids_count
-            sf = hypergeom.sf(k, M, n, N)
+            # n = tot_pw_f + PW_F_OFFSET
+            # sf = hypergeom.sf(k, M, n, N)
+
+            sf = hypergeom.sf(k-1, M, n, N)
+            logger.debug('pw=%s M=%d n=%d N=%d k=%d sf=%f' % (mp, M, n, N, k, sf))
 
             exp_value = hypergeom.mean(
                 self.data_source.pathway_unique_ids_count,

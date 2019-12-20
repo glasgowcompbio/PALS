@@ -5,15 +5,16 @@ import numpy as np
 import pandas as pd
 import pylab as plt
 import seaborn as sns
+from loguru import logger
 
 from pals.feature_extraction import DataSource
 
 
 def construct_intensity_df(sample_fnames, pathway_names, random=False):
     if not random:  # use predetermined data
-        data = [10.0, 10.0, 20.0, 20.0, 30.0, 30.0, 40.0, 40.0]
+        data = [20.0, 20.0, 20.0, 20.0, 40.0, 40.0, 40.0, 40.0]
     else:  # randomly sample from a normal distribution
-        data = np.random.normal(0, 1, 8)
+        data = np.random.normal(0, 1, len(sample_fnames))
 
         # loop over pathway names, generate logged peak data (with some noise) up to num peaks
     pk_samp_intensities = []
@@ -74,7 +75,7 @@ def plot_intensity_matrix(int_df, out_file=None):
         plt.savefig(out_file, dpi=300)
 
 
-def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames):
+def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, prob_missing_peaks):
     int_df = np.exp(int_df.copy())
     int_df = int_df.reset_index()
     int_df.index = np.arange(1, len(int_df) + 1)
@@ -86,6 +87,11 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames):
     annotation_df = pd.DataFrame.from_dict(annotations, orient='index')
     annotation_df.index.name = 'row_id'
     annotation_df.columns = ['entity_id']
+    logger.debug('Dataset annotations = %d' % annotation_df.shape[0])
+
+    # randomly sample (1-prob_missing_peaks) rows from annotation_df without replacement
+    annotation_df = annotation_df.sample(frac=(1 - prob_missing_peaks), replace=False)
+    logger.debug('Sampled annotations = %d with prob_missing_peaks=%.2f' % (annotation_df.shape[0], prob_missing_peaks))
 
     experimental_design = {
         'comparisons': [
