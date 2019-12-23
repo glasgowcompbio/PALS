@@ -76,6 +76,7 @@ class PALS(object):
                 # n = the number of success in the population = the number of differentially expressed entities in M
                 # N = sample size = the number of unique formulae found in database AND found in the pathway of interest
                 # k = the number of drawn success = the number of differentially expressed entities in N
+                # P(X=k) = [(n C k) (M-n C N-k)] / (M c N)
 
                 M = self.data_source.pathway_unique_ids_count
                 significant_formulae = self._get_significant_formulae(condition_1, condition_2, measurement_df)

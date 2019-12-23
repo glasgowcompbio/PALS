@@ -10,27 +10,48 @@ from loguru import logger
 from pals.feature_extraction import DataSource
 
 
-def construct_intensity_df(sample_fnames, pathway_names, random=False):
-    if not random:  # use predetermined data
-        data = [20.0, 20.0, 20.0, 20.0, 40.0, 40.0, 40.0, 40.0]
-    else:  # randomly sample from a normal distribution
-        data = np.random.normal(0, 1, len(sample_fnames))
+def construct_intensity_df(sample_fnames, pathway_names, random=False, background_pathways=None):
+    # some predetermined data with fold changes between conditions
+    synthetic_data = [20.0, 20.0, 20.0, 20.0, 40.0, 40.0, 40.0, 40.0]
 
-        # loop over pathway names, generate logged peak data (with some noise) up to num peaks
+    # randomly sample some noise from a normal distribution
+    random_data = np.random.normal(0, 1, len(sample_fnames))
+
+    # copy pathway names dictionary
+    pathway_names = dict(pathway_names)
+
+    # loop over pathway names, generate logged peak data (with some noise) up to num peaks
     pk_samp_intensities = []
     for name, num in pathway_names.items():
         for n in range(num):
             peak_int_list = []
             peak_int_list.append(name)
-            data_noise = data + np.random.normal(0, 5, len(data))
+            if not random:
+                data_noise = synthetic_data + np.random.normal(0, 5, len(synthetic_data))
+            else:
+                data_noise = random_data + np.random.normal(0, 5, len(random_data))
             peak_int_list.extend(list(data_noise))  # The intensities of all the samples for this peak.
             pk_samp_intensities.append(peak_int_list)
+
+    # generate background pathways randomly
+    if background_pathways is not None:
+        for i in range(background_pathways):
+            # sample number of entities in the pathway randomly from 1 .. 100
+            num = np.random.randint(5, 51)
+            name = 'background%d' % (i)
+            pathway_names[name] = num
+            for n in range(num):
+                peak_int_list = []
+                peak_int_list.append(name)
+                data_noise = random_data + np.random.normal(0, 5, len(random_data))
+                peak_int_list.extend(list(data_noise))  # The intensities of all the samples for this peak.
+                pk_samp_intensities.append(peak_int_list)
 
     int_df = pd.DataFrame(pk_samp_intensities).set_index([0])
     int_df.columns = sample_fnames
     int_df.index.name = "ms1_peak_id"
     int_df.columns.name = "sample_name"
-    return int_df
+    return int_df, pathway_names
 
 
 def add_random_peaks(sample_fnames, pathway_names, int_df, percent, noise_mean, noise_std):
