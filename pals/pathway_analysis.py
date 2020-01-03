@@ -90,7 +90,7 @@ class PALS(object):
 
                 # https://github.com/scipy/scipy/issues/7837
                 sf = hypergeom.sf(k-1, M, n, N)
-                logger.debug('pw=%s comp=%s M=%d n=%d N=%d k=%d sf=%f' % (pw, comp['name'], M, n, N, k, sf))
+                # logger.debug('pw=%s comp=%s M=%d n=%d N=%d k=%d sf=%f' % (pw, comp['name'], M, n, N, k, sf))
 
                 # the combined p-value column is just the same as the p-value since there's nothing to combine
                 item = (sf, )
@@ -323,7 +323,7 @@ class PALS(object):
             # sf = hypergeom.sf(k, M, n, N)
 
             sf = hypergeom.sf(k-1, M, n, N)
-            logger.debug('pw=%s M=%d n=%d N=%d k=%d sf=%f' % (mp, M, n, N, k, sf))
+            # logger.debug('pw=%s M=%d n=%d N=%d k=%d sf=%f' % (mp, M, n, N, k, sf))
 
             exp_value = hypergeom.mean(
                 self.data_source.pathway_unique_ids_count,

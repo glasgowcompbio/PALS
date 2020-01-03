@@ -36,7 +36,7 @@ def construct_intensity_df(sample_fnames, pathway_names, random=False, backgroun
     # generate background pathways randomly
     if background_pathways is not None:
         for i in range(background_pathways):
-            # sample number of entities in the pathway randomly from 1 .. 100
+            # sample number of entities in the pathway randomly from 5 .. 50
             num = np.random.randint(5, 51)
             name = 'background%d' % (i)
             pathway_names[name] = num
@@ -88,7 +88,7 @@ def add_random_peaks(sample_fnames, pathway_names, int_df, percent, noise_mean, 
 
 
 def plot_intensity_matrix(int_df, out_file=None):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(5, 10))
     sns.heatmap(int_df, cmap="rainbow")
     plt.title("Simulated intensity matrix (log)")
     plt.tight_layout()

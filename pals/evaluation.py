@@ -1,20 +1,18 @@
-import warnings
-
 import pandas as pd
 from loguru import logger
 
-from .pathway_analysis import PALS
 from .common import SIGNIFICANT_THRESHOLD
+from .pathway_analysis import PALS
 
 
-def run_experiment(experiment_name, data_source, case, control, n_samples, significant_column, n_iter,
+def run_experiment(experiment_name, data_source, case, control, proportions, significant_column, n_iter,
                    plage_weight, hg_weight):
     res = {
         'experiment_name': experiment_name,
         'data_source': data_source,
         'case': case,
         'control': control,
-        'n_samples': n_samples,
+        'proportions': proportions,
         'n_iter': n_iter,
         'significant_column': significant_column,
         'experiment_results': {},
@@ -24,39 +22,44 @@ def run_experiment(experiment_name, data_source, case, control, n_samples, signi
 
     # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
     experiment_results = res['experiment_results']
-    for n_sample in n_samples:
-        experiment_results[n_sample] = [] # to track the length of the resampled results
-        while len(experiment_results[n_sample]) < n_iter: # keep generating data until n_iter
-                try:
-                    # resample columns and generate a data source from it
-                    i = len(experiment_results[n_sample])
-                    logger.info('n_sample=%d iter=%d PALS experiment=%s case=%s control=%s' % (
-                    n_sample, i, experiment_name, case, control))
-                    ds_resampled = data_source.resample(n_sample, case=case, control=control, axis=1)
+    n_samples = proportions * data_source.get_measurements().shape[0]
+    n_samples = n_samples.astype(int)
+    for i in range(len(proportions)):
+        prop = proportions[i]
+        n_sample = n_samples[i]
+        experiment_results[prop] = []  # to track the length of the resampled results
+        while len(experiment_results[prop]) < n_iter:  # keep generating data until n_iter
+            try:
+                # resample columns and generate a data source from it
+                i = len(experiment_results[prop])
+                logger.info('prop=%f n_sample=%d iter=%d PALS experiment=%s case=%s control=%s' % (
+                    prop, n_sample, i, experiment_name, case, control))
+                ds_resampled = data_source.resample(n_sample, case=case, control=control, axis=0)
 
-                    # run PALS on the resampled data
-                    pals = PALS(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight)
-                    pathway_df = pals.get_pathway_df()
-                    ora_df = pals.get_ora_df()
+                # run PALS on the resampled data
+                pals = PALS(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight)
+                pathway_df = pals.get_pathway_df()
+                ora_df = pals.get_ora_df()
 
-                    # store the results
-                    item = {
-                        # 'data': ds_resampled, # TOO BIG!!
-                        'PALS': pathway_df,
-                        'ORA': ora_df
-                    }
-                    experiment_results[n_sample].append(item)
-                except UserWarning as e:
-                    logger.warning('Failed to generate good data due to %s, will try again' % (str(e)))
+                # store the results
+                item = {
+                    # 'data': ds_resampled, # TOO BIG!!
+                    'PALS': pathway_df,
+                    'ORA': ora_df
+                }
+                experiment_results[prop].append(item)
+            except UserWarning as e:
+                logger.warning('Failed to generate good data due to %s, will try again' % (str(e)))
 
     return res
 
 
-def evaluate_performance(results, experiment_name, N):
+def evaluate_performance(results, experiment_name, N=None):
     """
     Definition of precision and recall at N:
     Precision@N = (# of recommended items @N that are relevant) / (# of recommended items @N)
     Recall@N = (# of recommended items @N that are relevant) / (total # of relevant items)
+    If N is None, then all items above the significant threshold are considered.
 
     So here we define:
     - full results = top-N significant pathways from running the method on the complete dataframe
@@ -83,42 +86,48 @@ def evaluate_performance(results, experiment_name, N):
     method = 'PALS'
     pals_full_df = pals.get_pathway_df()
     ora_full_df = pals.get_ora_df()
-    pals_full = _select_significant_entries(pals_full_df, significant_column, N, SIGNIFICANT_THRESHOLD)
-    ora_full = _select_significant_entries(ora_full_df, significant_column, N, SIGNIFICANT_THRESHOLD)
+    pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+    ora_full = _select_significant_entries(ora_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
 
     # evaluate the partial results w.r.t to the full results
     logger.debug('Evaluating partial results')
-    n_samples = list(experiment_results.keys())
-    for n_sample in n_samples:
-        iterations = range(len(experiment_results[n_sample]))
+    proportions = list(experiment_results.keys())
+    for prop in proportions:
+        iterations = range(len(experiment_results[prop]))
         for i in iterations:
-            logger.debug('n_sample %d iteration %d' % (n_sample, i))
-            item = experiment_results[n_sample][i]
+            logger.debug('prop %d iteration %d' % (prop, i))
+            item = experiment_results[prop][i]
             # for PALS
             method = 'PALS'
             full = pals_full
             partial_df = item[method]
-            partial = _select_significant_entries(partial_df, significant_column, N, SIGNIFICANT_THRESHOLD)
-            performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
+            partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+            performances.append((method, prop, i) + _compute_prec_rec_f1(full, partial))
             # for ORA
             method = 'ORA'
             full = ora_full
             partial_df = item[method]
-            partial = _select_significant_entries(partial_df, significant_column, N, SIGNIFICANT_THRESHOLD)
-            performances.append((method, n_sample, i) + _compute_prec_rec_f1(full, partial))
+            partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+            performances.append((method, prop, i) + _compute_prec_rec_f1(full, partial))
 
     logger.debug('Done!')
     performance_df = pd.DataFrame(performances,
-                                  columns=['method', 'n_sample', 'i', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1'])
+                                  columns=['method', 'proportion', 'i', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1'])
     return performance_df
 
 
-def _select_significant_entries(pathway_df, significant_column, N, threshold):
+def _select_significant_entries(pathway_df, significant_column, threshold, N):
     df = pathway_df.sort_values(significant_column, ascending=True)
     df = df.rename(columns={significant_column: 'p_value'})
-    df = df[['pw_name', 'p_value']]
+    try:
+        df = df[['pw_name', 'p_value', 'sf', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
+    except KeyError:
+        df = df[['pw_name', 'p_value', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
     df = df[df['p_value'] < threshold]
-    return df[0:N]
+    if N is not None:
+        return df[0:N]
+    else:
+        return df
 
 
 def _compute_prec_rec_f1(full, partial):
