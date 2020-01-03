@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="PALS-pathway",
-    version="1.1.0",
+    version="1.1.1",
     author="Joe Wandy",
     author_email="joe.wandy@glasgow.ac.uk",
     description="Pathway-level Analysis of Metabolites Expression Data",
@@ -15,6 +15,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    scripts=['pals/run_pals.py'],
     python_requires='>=3.6',
     packages=find_packages(),
     package_data={
