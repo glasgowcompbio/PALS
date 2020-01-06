@@ -9,18 +9,14 @@ from scipy.stats import combine_pvalues
 from scipy.stats import genextreme
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
-from sklearn import preprocessing
-from statsmodels.sandbox.stats.multicomp import multipletests
 
-
-from .common import PW_F_OFFSET, MIN_REPLACE, NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, SIGNIFICANT_THRESHOLD
+from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT
 
 
 class PALS(object):
 
     # The constructor just takes in the analysis and defines the project
-    def __init__(self, data_source, min_replace=MIN_REPLACE, num_resamples=NUM_RESAMPLES,
-                 plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT):
+    def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
@@ -30,7 +26,6 @@ class PALS(object):
         :param hg_weight: the weight for hypergeometric component when combining p-values
         """
         self.data_source = data_source
-        self.min_replace = min_replace
         self.num_resamples = num_resamples
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
@@ -41,140 +36,6 @@ class PALS(object):
     ####################################################################################################################
     # public methods
     ####################################################################################################################
-
-    def get_ora_df(self, correct_multiple_tests=True):
-        """
-        Main method to perform over-representation (ORA) analysis
-        :return: a dataframe containing pathway analysis results from ORA
-        """
-        logger.debug('Calculating ORA')
-        measurement_df = self.data_source.get_measurements()
-        measurement_df = self._change_zero_peak_ints(measurement_df)
-        scaled_data = np.log(np.array(measurement_df))
-
-        # Put the scaled data back into df for further use
-        sample_names = measurement_df.columns
-        measurement_df[sample_names] = scaled_data
-
-        # For all of the pathways get all of the peak IDs
-        assert len(self.data_source.dataset_pathways) > 0, 'No pathways found in the dataset'
-        t_test_list = []
-        pathways = self.data_source.dataset_pathways
-        for pw in pathways:
-            pathway_row_ids = self.data_source.dataset_pathways_to_row_ids[pw]
-            pw_name = self.data_source.pathway_dict[pw]['display_name']
-            path_params = [pw, pw_name]
-            column_names = ['mapids', 'pw_name']
-            for comp in self.data_source.comparisons:
-                comparison_samples = self.data_source.get_comparison_samples(comp)
-                condition_1 = comparison_samples[0]
-                condition_2 = comparison_samples[1]
-
-                # Perform hypergeometric test to assess the significance of finding formulae from dataset in the pathway
-                # of interest. Parameters:
-                # M = population size = the number of unique formulae found in database AND found in all the pathways
-                # n = the number of success in the population = the number of differentially expressed entities in M
-                # N = sample size = the number of unique formulae found in database AND found in the pathway of interest
-                # k = the number of drawn success = the number of differentially expressed entities in N
-                # P(X=k) = [(n C k) (M-n C N-k)] / (M c N)
-
-                M = self.data_source.pathway_unique_ids_count
-                significant_formulae = self._get_significant_formulae(condition_1, condition_2, measurement_df)
-
-                n = len(self.data_source._get_pathway_unique_ids().intersection(significant_formulae))
-
-                pw_ds_f = self.data_source.pathway_to_unique_ids_dict[pw]
-                N = len(pw_ds_f)
-
-                k = len(pw_ds_f.intersection(significant_formulae))
-
-                # https://github.com/scipy/scipy/issues/7837
-                sf = hypergeom.sf(k-1, M, n, N)
-                # logger.debug('pw=%s comp=%s M=%d n=%d N=%d k=%d sf=%f' % (pw, comp['name'], M, n, N, k, sf))
-
-                # the combined p-value column is just the same as the p-value since there's nothing to combine
-                item = (sf, )
-                path_params.extend(item)
-
-                # column names are computed is in the loop, but actually we only need it to be computed once
-                col_name = comp['name'] + ' p-value'
-                item = (col_name, )
-                column_names.extend(item)
-
-            t_test_list.append(path_params)
-
-        t_test = pd.DataFrame(t_test_list, columns=column_names).set_index(['mapids'])
-        t_test.index.name = 'mapids'
-
-        # correct for multiple testing
-        if correct_multiple_tests:
-            logger.debug('Correcting for multiple t-tests')
-        else:
-            logger.debug('Not correcting for multiple t-tests')
-            
-        all_dfs = []
-        for comp in self.data_source.comparisons:
-            # we use the combined p-value column name to store the p-values corrected after multiple testing
-            col_name = comp['name'] + ' p-value'
-            if self.data_source.database_name is not None:
-                comb_col_name = '%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
-            else:
-                comb_col_name = '%s %s' % (comp['name'], 'comb_p')
-
-            # copy the existing p-values
-            pvalues = t_test[col_name].copy()
-            if correct_multiple_tests:
-                # check if any NaN, if yes exclude them
-                keep = pd.notnull(pvalues)
-                df = pvalues[keep]
-
-                # perform multiple t-test corrections using FDR-BH
-                reject, pvals_corrected, _, _ = multipletests(df.values, method='fdr_bh')
-
-                # set the results back, and rename the column
-                df.values[:] = pvals_corrected
-            else:
-                df = pvalues
-
-            df = pd.DataFrame(df)
-            df = df.rename(columns={col_name: comb_col_name})
-            all_dfs.append(df)
-
-        # combine all the results across all comparisons
-        all_dfs = pd.concat(all_dfs, axis=1)
-
-        # merge original df with the multiple-tests df
-        t_test = t_test.merge(all_dfs, left_index=True, right_index=True, how='left')
-        t_test_filled = t_test.fillna(1.0)
-
-        mapids = t_test_filled.index.values.tolist()
-        cov_df = self._calculate_coverage_df(mapids)
-        coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
-
-        # Merge the two dfs together
-        pathway_df = pd.merge(t_test_filled, coverage_df, left_index=True, right_index=True, how='outer')
-        return pathway_df
-
-    def _get_significant_formulae(self, condition_1, condition_2, measurement_df, pathway_row_ids=None):
-        if pathway_row_ids is None:
-            pathway_row_ids = measurement_df.index.values
-        c1 = measurement_df.loc[pathway_row_ids, condition_1].values
-        c2 = measurement_df.loc[pathway_row_ids, condition_2].values
-        with warnings.catch_warnings():
-            # quietly ignore all warnings that come from failed t-tests if the values in the two conditions are the same
-            warnings.filterwarnings('ignore')
-            statistics, p_value = ttest_ind(c1, c2, axis=1)
-        assert len(p_value) == len(pathway_row_ids)
-
-        # TODO: vectorise this properly
-        formula_detected_list = []
-        for i in range(len(p_value)):
-            row_id = pathway_row_ids[i]
-            p = p_value[i]
-            if p < SIGNIFICANT_THRESHOLD:
-                peak_formulae = list(self.data_source.dataset_row_id_to_unique_ids[row_id])
-                formula_detected_list.extend(peak_formulae)
-        return set(formula_detected_list)
 
     def get_pathway_df(self, resample=True, standardize=True):
         """
@@ -202,7 +63,7 @@ class PALS(object):
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
                 try:
-                    measurement_df = self._standardize_intensity_df(measurement_df)
+                    measurement_df = self.data_source.standardize_intensity_df()
                 except UserWarning as e:
                     # raise the exception if we encounter:
                     # "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
@@ -254,7 +115,7 @@ class PALS(object):
         t_test_filled = t_test.fillna(1.0)
 
         mapids = t_test_filled.index.values.tolist()
-        cov_df = self._calculate_coverage_df(mapids)
+        cov_df = self.data_source._calculate_coverage_df(mapids)
         coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
 
         # Merge the two dfs together
@@ -290,7 +151,7 @@ class PALS(object):
         t_test_filled = t_test.fillna(1.0)
 
         mapids = t_test_filled.index.values.tolist()
-        cov_df = self._calculate_coverage_df(mapids)
+        cov_df = self.data_source._calculate_coverage_df(mapids)
         coverage_df = cov_df.reindex(t_test_filled.index)  # make sure dfs are in same order before merging
 
         # Merge the two dfs together
@@ -322,7 +183,7 @@ class PALS(object):
             # n = tot_pw_f + PW_F_OFFSET
             # sf = hypergeom.sf(k, M, n, N)
 
-            sf = hypergeom.sf(k-1, M, n, N)
+            sf = hypergeom.sf(k - 1, M, n, N)
             # logger.debug('pw=%s M=%d n=%d N=%d k=%d sf=%f' % (mp, M, n, N, k, sf))
 
             exp_value = hypergeom.mean(
@@ -374,47 +235,6 @@ class PALS(object):
     ####################################################################################################################
     # private methods
     ####################################################################################################################
-
-    def _standardize_intensity_df(self, measurement_df):
-        """
-        Standardize measurement dataframe by filling in missing values and standardizing across samples
-        :param measurement_df: Dataframe of measured intensites (raw)
-        :return: DF with zero intensities replaced and the values standardized
-        """
-        # Change the 0.00 intensities in the matrix to useable values
-        measurement_df = self._change_zero_peak_ints(measurement_df)
-
-        # standardize the data across the samples (zero mean and unit variance))
-        logger.debug("Scaling the data across the sample: zero mean and unit variance")
-        scaled_data = np.log(np.array(measurement_df))
-        scaled_data = preprocessing.scale(scaled_data, axis=1)
-
-        # Put the scaled data back into df for further use
-        sample_names = measurement_df.columns
-        measurement_df[sample_names] = scaled_data
-        return measurement_df
-
-    def _change_zero_peak_ints(self, measurement_df):
-        """
-        A method to change a 'zero' entries in a dataframe.
-        If all intensities in a (factor) group are zero, a min value is set.
-        If there are > 1 and < number in group zero intensities, then the average of the non_zeros entries is calculated
-        and used. Assuming the PiMP mzXML file names are unique
-        :param measurement_df: A dataframe of peak intensities with peak ids (rows) and samples (columns)
-        :return: No return, modifies peak_int_df.
-        """
-        # Get the min_intensity value set for the analysis
-        logger.debug("Setting the zero intensity values in the dataframe")
-        # Replace 0.0 with NaN for easier operations ahead
-        measurement_df[measurement_df == 0.0] = None
-        for group_name, samples in self.data_source.groups.items():
-            # If all zero in group then replace with minimum
-            measurement_df.loc[measurement_df.loc[:, samples].isnull().all(axis=1), samples] = self.min_replace
-
-            # Replace any other zeros with mean of group
-            subset_df = measurement_df.loc[:, samples]
-            measurement_df.loc[:, samples] = subset_df.mask(subset_df.isnull(), subset_df.mean(axis=1), axis=0)
-        return measurement_df
 
     def _calculate_pathway_activity_df(self, measurement_df):
         """
@@ -482,28 +302,3 @@ class PALS(object):
             pvalue = genextreme.sf(tvalue, *maxparams) if tvalue >= 0 else genextreme.sf(-tvalue, *minparams)
             pvalues.append(pvalue)
         return pvalues
-
-    def _calculate_coverage_df(self, mapids):
-        """
-        Calculate the Formula coverage for a dataset.
-        :param mapids: The Mapids for the pathways to be used
-        :return: A dataframe containing the number of unique formulae for a pathway, along with those
-        annotated, identified and the total unique Fomulae in each pathway.
-        """
-        logger.debug("Calculating dataset formula coverage")
-
-        # num_formula: Stores the number of unqique kegg formulae for a pathway
-        num_formula = self.data_source.get_pathway_unique_counts(mapids)
-        num_totalF = self.data_source.get_pathway_dataset_unique_counts(mapids)
-
-        # unq_pw_f: unique formula expected for a pathway
-        # tot_ds_F: unique formula for a pathway in a dataset
-        data = {'unq_pw_F': num_formula,
-                'tot_ds_F': num_totalF, }
-        for_df = pd.DataFrame(data)
-        for_df.index = mapids
-
-        # Calculate the coverage of the formula found in the ds vs formulae in the pathway
-        for_df['F_coverage'] = (((for_df['tot_ds_F']) / for_df['unq_pw_F']) * 100).round(2)
-
-        return for_df

@@ -96,7 +96,7 @@ def plot_intensity_matrix(int_df, out_file=None):
         plt.savefig(out_file, dpi=300)
 
 
-def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, prob_missing_peaks):
+def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, prob_missing_peaks, min_replace):
     int_df = np.exp(int_df.copy())
     int_df = int_df.reset_index()
     int_df.index = np.arange(1, len(int_df) + 1)
@@ -123,7 +123,7 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, p
             'control': control_fnames
         }
     }
-    ds = DataSource(int_df, annotation_df, experimental_design, None, database=data)
+    ds = DataSource(int_df, annotation_df, experimental_design, None, database=data, min_replace=min_replace)
     return ds
 
 

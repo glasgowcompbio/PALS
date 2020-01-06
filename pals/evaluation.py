@@ -2,7 +2,8 @@ import pandas as pd
 from loguru import logger
 
 from .common import SIGNIFICANT_THRESHOLD
-from .pathway_analysis import PALS
+from .PALS import PALS
+from .ORA import ORA
 
 
 def run_experiment(experiment_name, data_source, case, control, proportions, significant_column, n_iter,
@@ -39,7 +40,10 @@ def run_experiment(experiment_name, data_source, case, control, proportions, sig
                 # run PALS on the resampled data
                 pals = PALS(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight)
                 pathway_df = pals.get_pathway_df()
-                ora_df = pals.get_ora_df()
+
+                # run ORA on the resampled data
+                ora = ORA(ds_resampled)
+                ora_df = pals.get_pathway_df()
 
                 # store the results
                 item = {
@@ -79,14 +83,16 @@ def evaluate_performance(results, experiment_name, N=None):
     ds = res['data_source']
     plage_weight = res['plage_weight']
     hg_weight = res['hg_weight']
-    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
     performances = []
 
     # generate PALS full results
-    method = 'PALS'
+    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
     pals_full_df = pals.get_pathway_df()
-    ora_full_df = pals.get_ora_df()
     pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+
+    # generate ORA full results
+    ora = ORA(ds)
+    ora_full_df = ora.get_pathway_df()
     ora_full = _select_significant_entries(ora_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
 
     # evaluate the partial results w.r.t to the full results

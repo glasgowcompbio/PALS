@@ -36,6 +36,9 @@ REACTOME_SPECIES_RATTUS_NORVEGICUS = 'Rattus norvegicus'
 REACTOME_SPECIES_SACCHAROMYCES_CEREVISIAE = 'Saccharomyces cerevisiae'
 REACTOME_SPECIES_SUS_SCROFA = 'Sus scrofa'
 
+PATHWAY_ANALYSIS_PALS = 'PALS'
+PATHWAY_ANALYSIS_ORA = 'ORA'
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 

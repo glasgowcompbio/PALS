@@ -1,11 +1,13 @@
 import os
 from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 from loguru import logger
+from sklearn import preprocessing
 
 from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
-    DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL
+    DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE
 from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict, get_protein_entity_dict, \
     get_protein_mapping_dict, get_gene_entity_dict, get_gene_mapping_dict
 
@@ -13,7 +15,8 @@ from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_d
 class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
-                 reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None):
+                 reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None,
+                 min_replace=MIN_REPLACE):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name
@@ -30,6 +33,7 @@ class DataSource(object):
         self.reactome_species = reactome_species
         self.reactome_metabolic_pathway_only = reactome_metabolic_pathway_only
         self.reactome_query = reactome_query
+        self.min_replace = min_replace
 
         self.groups = dict(self.experimental_design['groups'].items())
         self.comparisons = self.experimental_design['comparisons']
@@ -243,6 +247,73 @@ class DataSource(object):
             new_ds = DataSource(shuffled_df, annotation_df, experimental_design, self.database_name,
                                 self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
         return new_ds
+
+    def standardize_intensity_df(self):
+        """
+        Standardize measurement dataframe by filling in missing values and standardizing across samples
+        :param measurement_df: Dataframe of measured intensites (raw)
+        :return: DF with zero intensities replaced and the values standardized
+        """
+        # Change the 0.00 intensities in the matrix to useable values
+        measurement_df = self.change_zero_peak_ints()
+
+        # standardize the data across the samples (zero mean and unit variance))
+        logger.debug("Scaling the data across the sample: zero mean and unit variance")
+        scaled_data = np.log(np.array(measurement_df))
+        scaled_data = preprocessing.scale(scaled_data, axis=1)
+
+        # Put the scaled data back into df for further use
+        sample_names = measurement_df.columns
+        measurement_df[sample_names] = scaled_data
+        return measurement_df
+
+    def change_zero_peak_ints(self):
+        """
+        A method to change a 'zero' entries in a dataframe.
+        If all intensities in a (factor) group are zero, a min value is set.
+        If there are > 1 and < number in group zero intensities, then the average of the non_zeros entries is calculated
+        and used. Assuming the PiMP mzXML file names are unique
+        :param measurement_df: A dataframe of peak intensities with peak ids (rows) and samples (columns)
+        :return: No return, modifies peak_int_df.
+        """
+        # Get the min_intensity value set for the analysis
+        logger.debug("Setting the zero intensity values in the dataframe")
+        measurement_df = self.get_measurements()
+
+        # Replace 0.0 with NaN for easier operations ahead
+        measurement_df[measurement_df == 0.0] = None
+        for group_name, samples in self.groups.items():
+            # If all zero in group then replace with minimum
+            measurement_df.loc[measurement_df.loc[:, samples].isnull().all(axis=1), samples] = self.min_replace
+
+            # Replace any other zeros with mean of group
+            subset_df = measurement_df.loc[:, samples]
+            measurement_df.loc[:, samples] = subset_df.mask(subset_df.isnull(), subset_df.mean(axis=1), axis=0)
+        return measurement_df
+
+    def _calculate_coverage_df(self, mapids):
+        """
+        Calculate the Formula coverage for a dataset.
+        :param mapids: The Mapids for the pathways to be used
+        :return: A dataframe containing the number of unique formulae for a pathway, along with those
+        annotated, identified and the total unique Fomulae in each pathway.
+        """
+        logger.debug("Calculating dataset formula coverage")
+
+        # num_formula: Stores the number of unqique kegg formulae for a pathway
+        num_formula = self.get_pathway_unique_counts(mapids)
+        num_totalF = self.get_pathway_dataset_unique_counts(mapids)
+
+        # unq_pw_f: unique formula expected for a pathway
+        # tot_ds_F: unique formula for a pathway in a dataset
+        data = {'unq_pw_F': num_formula,
+                'tot_ds_F': num_totalF, }
+        for_df = pd.DataFrame(data)
+        for_df.index = mapids
+
+        # Calculate the coverage of the formula found in the ds vs formulae in the pathway
+        for_df['F_coverage'] = (((for_df['tot_ds_F']) / for_df['unq_pw_F']) * 100).round(2)
+        return for_df
 
     def _get_unique_id(self, entity_id):
         """

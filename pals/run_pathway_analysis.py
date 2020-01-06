@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 
+import sys
 from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
 
 import pandas as pd
-from loguru import logger
 
+sys.path.append('.')
+
+from pals.ORA import ORA
+from pals.PALS import PALS
 from pals.common import *
 from pals.feature_extraction import DataSource
-from pals.pathway_analysis import PALS
 
 
 def pair(arg):
@@ -23,18 +26,20 @@ def pair(arg):
 
 def build_parser():
     # example usage:
-    # run_pals.py intensity.csv annotation.csv --comparisons beer1/beer2 beer3/beer4 --db DATABASE_PIMP_KEGG --min_replace 5000 --plage_weight 5 --hg_weight 1
-    # run_pals.py intensity.csv annotation.csv --comparisons beer1/beer2 beer3/beer4 --db DATABASE_REACTOME_KEGG --species Homo sapiens --metabolic-pathways-only True --reactome-query True
+    # run_pals.py PALS intensity.csv annotation.csv --comparisons beer1/beer2 beer3/beer4 --db DATABASE_PIMP_KEGG --min_replace 5000 --plage_weight 5 --hg_weight 1
+    # run_pals.py ORA intensity.csv annotation.csv --comparisons beer1/beer2 beer3/beer4 --db DATABASE_REACTOME_KEGG --species Homo sapiens --metabolic-pathways-only True --reactome-query True
 
-    parser = ArgumentParser(description="Run Pathway Activity Level Scoring (PALS)")
+    parser = ArgumentParser(description="Run Pathway Analysis")
 
     # required parameters
+    parser.add_argument('method', default=PATHWAY_ANALYSIS_PALS, help='Pathway Analysis Method',
+                        choices=(PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA)),
     parser.add_argument('intensity_csv', type=Path, help='Intensity CSV file')
     parser.add_argument('annotation_csv', type=Path, help='Annotation CSV file')
     parser.add_argument('output_file', type=Path, help='PALS analysis output')
-    parser.add_argument('--db', required=True, default=DATABASE_REACTOME_KEGG, help='Database name',
-                        choices=(DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI,
-                                 DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL))
+    parser.add_argument('--db', required=True, default=DATABASE_REACTOME_KEGG, help='Database name', choices=(
+        DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_REACTOME_UNIPROT,
+        DATABASE_REACTOME_ENSEMBL))
     parser.add_argument('--comparisons', required=True, type=pair, nargs='+')
 
     # common parameters
@@ -157,13 +162,18 @@ def main(args):
     ds = DataSource(int_df, annotation_df, experimental_design, database_name,
                     reactome_species=reactome_species,
                     reactome_metabolic_pathway_only=reactome_metabolic_pathway_only,
-                    reactome_query=reactome_query)
+                    reactome_query=reactome_query, min_replace=min_replace)
 
-    # run PALS
-    pals = PALS(ds, min_replace=min_replace, plage_weight=plage_weight, hg_weight=hg_weight)
+    # run the selected pathway analysis method
+    method = None
+    if args['method'] == PATHWAY_ANALYSIS_PALS:
+        method = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
+    elif args['method'] == PATHWAY_ANALYSIS_ORA:
+        method = ORA(ds)
+    assert method is not None
 
     # save the results
-    pathway_df = pals.get_pathway_df()
+    pathway_df = method.get_pathway_df()
     output_file = args['output_file']
     logger.info('Saving PALS results to %s' % output_file)
     pathway_df.to_csv(output_file)
