@@ -15,7 +15,6 @@ from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT
 
 class PALS(object):
 
-    # The constructor just takes in the analysis and defines the project
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT):
         """
         Creates a PALS analysis

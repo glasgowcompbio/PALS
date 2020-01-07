@@ -7,17 +7,15 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
-from .common import MIN_REPLACE, SIGNIFICANT_THRESHOLD
+from .common import SIGNIFICANT_THRESHOLD
 
 
 class ORA(object):
 
-    # The constructor just takes in the analysis and defines the project
     def __init__(self, data_source):
         """
         Creates a ORA analysis
         :param data_source: a DataSource object
-        :param min_replace: replace a group with all zero values with this min intensity
         """
         self.data_source = data_source
 
@@ -135,6 +133,7 @@ class ORA(object):
 
         # Merge the two dfs together
         pathway_df = pd.merge(t_test_filled, coverage_df, left_index=True, right_index=True, how='outer')
+        del pathway_df.index.name
         return pathway_df
 
     ####################################################################################################################
