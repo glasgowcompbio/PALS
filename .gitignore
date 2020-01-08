@@ -108,3 +108,4 @@ notebooks/test_data/HAT/
 notebooks/*.eps
 notebooks/*.png
 notebooks/test_data/synthetic/
+notebooks/test_data/

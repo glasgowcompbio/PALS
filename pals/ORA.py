@@ -7,17 +7,19 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
-from .common import SIGNIFICANT_THRESHOLD
+from .common import SIGNIFICANT_THRESHOLD, is_comparison_used
 
 
 class ORA(object):
 
-    def __init__(self, data_source):
+    def __init__(self, data_source, case=None, control=None):
         """
         Creates a ORA analysis
         :param data_source: a DataSource object
         """
         self.data_source = data_source
+        self.case = case
+        self.control = control
 
     ####################################################################################################################
     # public methods
@@ -46,6 +48,8 @@ class ORA(object):
             path_params = [pw, pw_name]
             column_names = ['mapids', 'pw_name']
             for comp in self.data_source.comparisons:
+                if not is_comparison_used(comp, self.case, self.control):
+                    continue
                 comparison_samples = self.data_source.get_comparison_samples(comp)
                 condition_1 = comparison_samples[0]
                 condition_2 = comparison_samples[1]
@@ -94,6 +98,9 @@ class ORA(object):
 
         all_dfs = []
         for comp in self.data_source.comparisons:
+            if not is_comparison_used(comp, self.case, self.control):
+                continue
+
             # we use the combined p-value column name to store the p-values corrected after multiple testing
             col_name = comp['name'] + ' p-value'
             if self.data_source.database_name is not None:

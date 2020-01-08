@@ -10,12 +10,13 @@ from scipy.stats import genextreme
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 
-from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT
+from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used
 
 
 class PALS(object):
 
-    def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT):
+    def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT,
+                 case=None, control=None):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
@@ -31,6 +32,9 @@ class PALS(object):
         # subsequently effects all of the subsequent calculations
         self.plage_weight = plage_weight
         self.hg_weight = hg_weight
+
+        self.case = case
+        self.control = control
 
     ####################################################################################################################
     # public methods
@@ -88,6 +92,9 @@ class PALS(object):
         all_pvalues = [activity_df.index, activity_df['pw name']]
         column_names = ['pw_name']
         for comp in self.data_source.comparisons:
+            if not is_comparison_used(comp, self.case, self.control):
+                continue
+
             logger.debug('Comparison %s' % comp['name'])
             column_names.append(comp['name'] + ' p-value')
             null_max_tvalues = []
@@ -135,6 +142,9 @@ class PALS(object):
             path_params = [pathway, name]
             column_names = ['pw_name']
             for comp in self.data_source.comparisons:
+                if not is_comparison_used(comp, self.case, self.control):
+                    continue
+
                 comparison_samples = self.data_source.get_comparison_samples(comp)
                 condition_1 = comparison_samples[0]
                 condition_2 = comparison_samples[1]
@@ -206,16 +216,23 @@ class PALS(object):
         logger.debug("Calculating the combined p-values")
 
         # Make a combined_p df to merge with the main df
+        column_names = []
+        for comp in self.data_source.comparisons:
+            if not is_comparison_used(comp, self.case, self.control):
+                continue
+            if self.data_source.database_name is not None:
+                col_name = '%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
+            else:
+                col_name = '%s %s' % (comp['name'], 'comb_p')
+            column_names.append(col_name)
+
         combine_p_list = []
-        if self.data_source.database_name is not None:
-            column_names = ['%s %s %s' % (self.data_source.database_name, comp['name'], 'comb_p')
-                            for comp in self.data_source.comparisons]
-        else:
-            column_names = ['%s %s' % (comp['name'], 'comb_p')
-                            for comp in self.data_source.comparisons]
         for mp in mapids:
             combine_p_pathway = [mp]
             for comp in self.data_source.comparisons:
+                if not is_comparison_used(comp, self.case, self.control):
+                    continue
+
                 p_value_colname = comp['name'] + ' p-value'
                 p_value = pathway_df_merge.loc[mp][p_value_colname]
                 sf = pathway_df_merge.loc[mp]['sf']

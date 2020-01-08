@@ -108,3 +108,13 @@ def set_log_level_info():
 def set_log_level_debug():
     logger.remove()
     logger.add(sys.stderr, level=logging.DEBUG)
+
+
+def is_comparison_used(comp, selected_case, selected_control):
+    # skip this comparison if not the same as what the user has specified
+    comp_case = comp['case']
+    comp_control = comp['control']
+    if selected_case is not None and selected_control is not None:
+        if selected_case != comp_case or selected_control != comp_control:
+            return False
+    return True

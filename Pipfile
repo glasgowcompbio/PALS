@@ -18,6 +18,7 @@ neo4j-driver = "*"
 pywin32 = {version = "!= 226",sys_platform = "== 'win32'"} # https://github.com/mhammond/pywin32/issues/1439
 bioservices = "*"
 tqdm = "*"
+ipyparallel = "*"
 
 [dev-packages]
 rpy2 = {version = "*",sys_platform = "!= 'win32'"}

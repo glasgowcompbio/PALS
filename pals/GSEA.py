@@ -3,10 +3,12 @@ import pandas as pd
 from loguru import logger
 from tqdm import tqdm
 
+from .common import is_comparison_used
+
 
 class GSEA(object):
 
-    def __init__(self, data_source, random_sets=1000, p_exp=1, pbar=True):
+    def __init__(self, data_source, random_sets=1000, p_exp=1, pbar=True, case=None, control=None):
         """
         Creates a GSEA analysis
         This GSEA implementation is based on https://github.com/mrcinv/GSEA.py.
@@ -20,11 +22,15 @@ class GSEA(object):
         self.pbar = pbar
         self.p_exp = p_exp
 
+        self.case = case
+        self.control = control
+
+
     ####################################################################################################################
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, correct_multiple_tests=True):
+    def get_pathway_df(self):
         """
         Main method to perform GSEA/MSEA analysis
         :return: a dataframe containing pathway analysis results from GSEA
@@ -54,6 +60,8 @@ class GSEA(object):
         # run GSEA for all comparisons
         all_dfs = []
         for comp in self.data_source.comparisons:
+            if not is_comparison_used(comp, self.case, self.control):
+                continue
             case = comp['case']
             control = comp['control']
             logger.debug('Running comparison case=%s control=%s' % (case, control))
