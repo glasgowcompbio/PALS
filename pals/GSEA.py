@@ -30,18 +30,20 @@ class GSEA(object):
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self):
+    def get_pathway_df(self, standardize=True):
         """
         Main method to perform GSEA/MSEA analysis
+        :param: whether to log the initial data
         :return: a dataframe containing pathway analysis results from GSEA
         """
         logger.debug('Calculating GSEA')
-        measurement_df = self.data_source.change_zero_peak_ints()
-        scaled_data = np.log(np.array(measurement_df))
+        if standardize:
+            measurement_df = self.data_source.change_zero_peak_ints()
+            scaled_data = np.log(np.array(measurement_df))
 
-        # Put the scaled data back into df for further use
-        sample_names = measurement_df.columns
-        measurement_df[sample_names] = scaled_data
+            # Put the scaled data back into df for further use
+            sample_names = measurement_df.columns
+            measurement_df[sample_names] = scaled_data
 
         D = measurement_df.values
 

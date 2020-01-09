@@ -25,18 +25,20 @@ class ORA(object):
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, correct_multiple_tests=True):
+    def get_pathway_df(self, correct_multiple_tests=True, standardize=True):
         """
         Main method to perform over-representation (ORA) analysis
+        :param: whether to log the initial data
         :return: a dataframe containing pathway analysis results from ORA
         """
         logger.debug('Calculating ORA')
-        measurement_df = self.data_source.change_zero_peak_ints()
-        scaled_data = np.log(np.array(measurement_df))
+        if standardize:
+            measurement_df = self.data_source.change_zero_peak_ints()
+            scaled_data = np.log(np.array(measurement_df))
 
-        # Put the scaled data back into df for further use
-        sample_names = measurement_df.columns
-        measurement_df[sample_names] = scaled_data
+            # Put the scaled data back into df for further use
+            sample_names = measurement_df.columns
+            measurement_df[sample_names] = scaled_data
 
         # For all of the pathways get all of the peak IDs
         assert len(self.data_source.dataset_pathways) > 0, 'No pathways found in the dataset'
