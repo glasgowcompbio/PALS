@@ -32,8 +32,8 @@ class ORA(object):
         :return: a dataframe containing pathway analysis results from ORA
         """
         logger.debug('Calculating ORA')
+        measurement_df = self.data_source.change_zero_peak_ints()
         if standardize:
-            measurement_df = self.data_source.change_zero_peak_ints()
             scaled_data = np.log(np.array(measurement_df))
 
             # Put the scaled data back into df for further use
