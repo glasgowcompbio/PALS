@@ -33,6 +33,7 @@ try:
 except Exception as e:
     logger.warning('Driver initialisation failed. PALS will run without Reactome support.')
 
+
 def get_neo4j_session():
     session = None
     try:
@@ -191,58 +192,6 @@ def get_protein_mapping_dict(species, database_name, metabolic_pathway_only=True
             RETURN DISTINCT
                 p.stId AS pathway_id,
                 re.identifier AS entity_id
-        """
-
-        params = {
-            'species': species,
-            'database_name': database_name
-        }
-        logger.debug(query)
-        query_res = session.run(query, params)
-
-        i = 0
-        for record in query_res:
-            pathway_id = record['pathway_id']
-            entity_id = record['entity_id']
-            results[entity_id].append(pathway_id)
-    finally:
-        if session is not None: session.close()
-    return dict(results)
-
-
-def get_gene_mapping_dict(species, database_name, metabolic_pathway_only=True, leaf=True):
-    results = defaultdict(list)
-    try:
-        session = get_neo4j_session()
-
-        # initial match clause in the query
-        query = """
-        MATCH (tp:TopLevelPathway)-[:hasEvent*]->
-              (p:Pathway)-[:hasEvent*]->(rle:ReactionLikeEvent),
-              (rle)-[:input|output|catalystActivity|physicalEntity|regulatedBy|regulator|hasComponent
-              |hasMember|hasCandidate*]->(pe:PhysicalEntity),
-              (pe:PhysicalEntity)-[:referenceEntity]->
-              (rg:ReferenceGeneProduct)-[:referenceGene]->
-              (rs:ReferenceSequence)-[:species]->(s:Species)
-        WHERE
-              rs.databaseName = '{database_name} AND            
-              s.displayName IN {species} AND
-        """
-
-        if leaf:  # retrieve only the leaf nodes in the pathway hierarchy
-            query += " (p)-[:hasEvent]->(rle) AND "
-
-        if metabolic_pathway_only:  # only retrieves metabolic pathways
-            query += " tp.displayName = 'Metabolism' AND "
-
-        # remove last AND
-        query = rchop(query.strip(), 'AND')
-
-        # add return clause
-        query += """
-            RETURN DISTINCT
-                p.stId AS pathway_id,
-                rs.identifier AS entity_id
         """
 
         params = {

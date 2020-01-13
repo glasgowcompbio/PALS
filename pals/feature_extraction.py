@@ -98,7 +98,7 @@ class DataSource(object):
         self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
         self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
 
-    def get_database(self, database_name, reactome_metabolic_pathway_only, reactome_query, reactome_species):
+    def get_database(self, database_name, mp_only, reactome_query, reactome_species):
         # load compound and pathway database information from file
         if database_name == DATABASE_PIMP_KEGG:  # PiMP exported pathways for KEGG
             json_file = os.path.abspath(os.path.join(DATA_DIR, '%s.json.zip' % DATABASE_PIMP_KEGG))
@@ -108,10 +108,11 @@ class DataSource(object):
         elif database_name == DATABASE_REACTOME_KEGG or database_name == DATABASE_REACTOME_CHEBI:  # must be using reactome
             if reactome_query:  # fetch reactome data from neo4j
                 logger.debug('Retrieving data for %s from Reactome %s metabolic_pathway_only=%s' %
-                             (reactome_species, database_name, reactome_metabolic_pathway_only))
-                pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
+                             (reactome_species, database_name, mp_only))
+                pathway_dict = get_pathway_dict(reactome_species,
+                                                metabolic_pathway_only=mp_only)
                 mapping_dict = get_compound_mapping_dict(reactome_species, database_name,
-                                                         reactome_metabolic_pathway_only)
+                                                         metabolic_pathway_only=mp_only)
                 entity_dict = load_entity_dict(database_name)
                 data = {
                     'pathway_dict': pathway_dict,
@@ -120,19 +121,20 @@ class DataSource(object):
                 }
             else:
                 # we didn't dump the data for all pathways. Only for the metabolic pathways only this can be used.
-                if not reactome_metabolic_pathway_only:
+                if not mp_only:
                     raise ValueError(
                         'Pathway information is not available. Please use live reactome query with --connect_to_reactome_server.')
-                metabolic_pathway_dir = 'metabolic_pathways' if reactome_metabolic_pathway_only else 'all_pathways'
+                metabolic_pathway_dir = 'metabolic_pathways' if mp_only else 'all_pathways'
                 json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
                                          '%s.json.zip' % reactome_species)
                 logger.debug('Loading %s' % json_file)
                 data = load_json(json_file, compressed=True)
 
         elif database_name == DATABASE_REACTOME_UNIPROT:
-            pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
+            pathway_dict = get_pathway_dict(reactome_species, metabolic_pathway_only=mp_only)
             entity_dict = get_protein_entity_dict(reactome_species, database_name)
-            mapping_dict = get_protein_mapping_dict(reactome_species, database_name)
+            mapping_dict = get_protein_mapping_dict(reactome_species, database_name,
+                                                    metabolic_pathway_only=mp_only)
             data = {
                 'pathway_dict': pathway_dict,
                 'entity_dict': entity_dict,
@@ -140,9 +142,10 @@ class DataSource(object):
             }
 
         elif database_name == DATABASE_REACTOME_ENSEMBL:
-            pathway_dict = get_pathway_dict(reactome_species, reactome_metabolic_pathway_only)
+            pathway_dict = get_pathway_dict(reactome_species, metabolic_pathway_only=mp_only)
             entity_dict = get_gene_entity_dict(reactome_species, database_name)
-            mapping_dict = get_gene_mapping_dict(reactome_species, database_name)
+            mapping_dict = get_gene_mapping_dict(reactome_species, database_name,
+                                                 metabolic_pathway_only=mp_only)
             data = {
                 'pathway_dict': pathway_dict,
                 'entity_dict': entity_dict,
