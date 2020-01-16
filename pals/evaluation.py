@@ -168,7 +168,6 @@ def construct_single_box_df(results, random_peaks, prob_missing, noise_std, meth
         box_plot_df['p_value'] = df['case/control p-value'].values
         box_plot_df['comb_p_value'] = df['case/control comb_p'].values
         box_plot_df['method'] = method
-        box_plot_df = box_plot_df[~box_plot_df.pathway.str.contains("background")]
         return box_plot_df
     except ValueError:
         return box_plot_df
