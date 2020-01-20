@@ -22,6 +22,7 @@ def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathw
     gsea_dfs = []
     random = False  # whether to sample intensity data randomly or using pre-set values
 
+    exp_results = {}
     for i in range(len(reqd_scenarios)):
         scenario = reqd_scenarios[i]
         logger.info(scenario)
@@ -45,12 +46,13 @@ def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathw
         df = construct_single_box_df(results, scenario['percent'], scenario['prob_missing_peaks'],
                                      scenario['noise_std'], 'GSEA')
         gsea_dfs.append(df)
+        exp_results[i] = results
 
     pals_df = pd.concat(pals_dfs, axis=0)
     ora_df = pd.concat(ora_dfs, axis=0)
     gsea_df = pd.concat(gsea_dfs, axis=0)
 
-    return pals_df, ora_df, gsea_df
+    return pals_df, ora_df, gsea_df, exp_results
 
 
 def calc_av_p_scores(case_fnames, control_fnames, pathway_names, num_iterations, percent=0, random=False, noise_mean=0,
@@ -330,21 +332,24 @@ def evaluate_performance(results, experiment_name, N=None):
             full = pals_full
             partial_df = item[method]
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(full, partial))
+            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
+                                                                         set(partial.index.values)))
 
             # for ORA
             method = 'ORA'
             full = ora_full
             partial_df = item[method]
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(full, partial))
+            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
+                                                                         set(partial.index.values)))
 
             # for GSEA
             method = 'GSEA'
             full = gsea_full
             partial_df = item[method]
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(full, partial))
+            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
+                                                                         set(partial.index.values)))
 
     logger.debug('Done!')
     performance_df = pd.DataFrame(performances,
@@ -366,9 +371,7 @@ def _select_significant_entries(pathway_df, significant_column, threshold, N):
         return df
 
 
-def _compute_prec_rec_f1(full, partial):
-    pathways_full = set(full.index.values)
-    pathways_partial = set(partial.index.values)
+def _compute_prec_rec_f1(pathways_full, pathways_partial):
     TP_items = pathways_full.intersection(pathways_partial)
     FP_items = pathways_partial - pathways_full
     FN_items = pathways_full - pathways_partial
