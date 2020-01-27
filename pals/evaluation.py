@@ -1,7 +1,10 @@
 import warnings
 
+import numpy as np
 import pandas as pd
 from loguru import logger
+from matplotlib.patches import PathPatch
+from sklearn.metrics import auc
 
 from .GSEA import GSEA
 from .ORA import ORA
@@ -173,6 +176,84 @@ def construct_single_box_df(results, random_peaks, prob_missing, noise_std, meth
         return box_plot_df
     except ValueError:
         return box_plot_df
+
+
+def get_tp_fn_fn(reqd_scenarios, exp_results, true_answers):
+    data = []
+    for i in exp_results:
+        scenario = reqd_scenarios[i]
+        noise_std = scenario['noise_std']
+        percent = scenario['percent']
+        prob_missing_peaks = scenario['prob_missing_peaks']
+
+        results = exp_results[i]
+        for method in results:
+            dataframes = results[method]
+            for df in dataframes:
+                filtered_df = _select_significant_entries(df, 'case/control comb_p', 0.05, None)
+                TP, FP, FN, prec, rec, f1 = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
+                row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1]
+                data.append(row)
+
+    df = pd.DataFrame(data,
+                      columns=['method', 'noise_std', 'percent', 'prob_missing_peaks', 'TP', 'FP', 'FN', 'prec', 'rec',
+                               'f1'])
+    return df
+
+
+def compute_pr_curve(method, df, true_answers):
+    pr_results = []
+    for threshold in df['p_value'].unique():
+        filtered_df = df[df['p_value'] <= threshold]
+        TP, FP, FN, prec, rec, f1 = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
+        row = (method, threshold, TP, FP, FN, prec, rec, f1)
+        pr_results.append(row)
+
+    pr_df = pd.DataFrame(pr_results, columns=['method', 'threshold', 'TP', 'FP', 'FN', 'prec', 'rec', 'f1'])
+    sorted_pr_df = pr_df.sort_values('prec', ascending=False)
+    return sorted_pr_df
+
+
+def get_auc(reqd_scenarios, exp_results, true_answers):
+    significant_column = 'case/control comb_p'
+    auc_results = []
+    for i in range(len(reqd_scenarios)):
+        scenario = reqd_scenarios[i]
+        results = exp_results[i]
+
+        for method in results:
+            dataframes = results[method]
+            method_aucs = []
+
+            for j in range(len(dataframes)):
+                pathway_df = dataframes[j]
+                df = pathway_df.sort_values(significant_column, ascending=False)
+                df = df.rename(columns={significant_column: 'p_value'})
+                try:
+                    df = df[['pw_name', 'p_value', 'sf', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
+                except KeyError:
+                    df = df[['pw_name', 'p_value', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
+
+                try:
+                    sorted_pr_df = compute_pr_curve(method, df, true_answers)
+                    auc_res = auc(sorted_pr_df['prec'], sorted_pr_df['rec'])  # compute auc
+                except ValueError:
+                    auc_res = 0.0
+                method_aucs.append(auc_res)
+
+            # show progress by printing average auc
+            avg_method_auc = np.mean(method_aucs)
+            print('%s %s %.3f' % (scenario, method, avg_method_auc))
+
+            for j in range(len(method_aucs)):
+                auc_res = method_aucs[j]
+                auc_results.append(
+                    (method, scenario['noise_std'], scenario['percent'], scenario['prob_missing_peaks'], j, auc_res))
+
+        print()
+
+    auc_df = pd.DataFrame(auc_results, columns=['method', 'noise_std', 'percent', 'prob_missing_peaks', 'iter', 'auc'])
+    return auc_df
 
 
 ########################################################################################################################
@@ -392,3 +473,38 @@ def _compute_prec_rec_f1(pathways_full, pathways_partial):
     # logger.debug('FP_items = %s' % FP_items)
     # logger.debug('FN_items = %s' % FN_items)
     return TP, FP, FN, prec, rec, f1
+
+
+# https://stackoverflow.com/questions/56838187/how-to-create-spacing-between-same-subgroup-in-seaborn-boxplot
+def adjust_box_widths(g, fac):
+    """
+    Adjust the withs of a seaborn-generated boxplot.
+    """
+
+    # iterating through Axes instances
+    for ax in g.axes:
+
+        # iterating through axes artists:
+        for c in ax.get_children():
+
+            # searching for PathPatches
+            if isinstance(c, PathPatch):
+                # getting current width of box:
+                p = c.get_path()
+                verts = p.vertices
+                verts_sub = verts[:-1]
+                xmin = np.min(verts_sub[:, 0])
+                xmax = np.max(verts_sub[:, 0])
+                xmid = 0.5 * (xmin + xmax)
+                xhalf = 0.5 * (xmax - xmin)
+
+                # setting new width of box
+                xmin_new = xmid - fac * xhalf
+                xmax_new = xmid + fac * xhalf
+                verts_sub[verts_sub[:, 0] == xmin, 0] = xmin_new
+                verts_sub[verts_sub[:, 0] == xmax, 0] = xmax_new
+
+                # setting new width of median line
+                for l in ax.lines:
+                    if np.all(l.get_xdata() == [xmin, xmax]):
+                        l.set_xdata([xmin_new, xmax_new])
