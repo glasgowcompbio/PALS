@@ -149,5 +149,8 @@ class GSEApy(object):
 
         # Merge the two dfs together
         pathway_df = pd.merge(combined_df, coverage_df, left_index=True, right_index=True, how='outer')
-        del pathway_df.index.name
+
+        # del pathway_df.index.name
+        pathway_df.rename_axis(None, inplace=True)
+
         return pathway_df
