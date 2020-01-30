@@ -7,10 +7,11 @@ from matplotlib.patches import PathPatch
 from sklearn.metrics import auc
 
 from .GSEA import GSEA
+from .GSEApy import GSEApy as GSEA
 from .ORA import ORA
 from .PALS import PALS
 from .common import SIGNIFICANT_THRESHOLD, MIN_REPLACE, set_log_level_info, set_log_level_debug, NUM_RESAMPLES, \
-    PLAGE_WEIGHT, HG_WEIGHT
+    PLAGE_WEIGHT, HG_WEIGHT, set_log_level_warning
 from .noise import construct_intensity_df, add_random_peaks, convert_to_data_source
 
 
@@ -191,13 +192,14 @@ def get_tp_fn_fn(reqd_scenarios, exp_results, true_answers):
             dataframes = results[method]
             for df in dataframes:
                 filtered_df = _select_significant_entries(df, 'case/control comb_p', 0.05, None)
-                TP, FP, FN, prec, rec, f1 = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
-                row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1]
+                TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(
+                    true_answers, set(filtered_df.index.values))
+                row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items]
                 data.append(row)
 
     df = pd.DataFrame(data,
                       columns=['method', 'noise_std', 'percent', 'prob_missing_peaks', 'TP', 'FP', 'FN', 'prec', 'rec',
-                               'f1'])
+                               'f1', 'TP_items', 'FP_items', 'FN_items'])
     return df
 
 
@@ -205,7 +207,7 @@ def compute_pr_curve(method, df, true_answers):
     pr_results = []
     for threshold in df['p_value'].unique():
         filtered_df = df[df['p_value'] <= threshold]
-        TP, FP, FN, prec, rec, f1 = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
+        TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
         row = (method, threshold, TP, FP, FN, prec, rec, f1)
         pr_results.append(row)
 
@@ -472,7 +474,7 @@ def _compute_prec_rec_f1(pathways_full, pathways_partial):
     # logger.debug('TP_items = %s' % TP_items)
     # logger.debug('FP_items = %s' % FP_items)
     # logger.debug('FN_items = %s' % FN_items)
-    return TP, FP, FN, prec, rec, f1
+    return TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items
 
 
 # https://stackoverflow.com/questions/56838187/how-to-create-spacing-between-same-subgroup-in-seaborn-boxplot

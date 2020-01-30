@@ -19,6 +19,7 @@ pywin32 = {version = "!= 226",sys_platform = "== 'win32'"} # https://github.com/
 bioservices = "*"
 tqdm = "*"
 ipyparallel = "*"
+gseapy = "*"
 
 [dev-packages]
 rpy2 = {version = "*",sys_platform = "!= 'win32'"}
