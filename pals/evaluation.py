@@ -191,7 +191,11 @@ def get_tp_fn_fn(reqd_scenarios, exp_results, true_answers):
         for method in results:
             dataframes = results[method]
             for df in dataframes:
-                filtered_df = _select_significant_entries(df, 'case/control comb_p', 0.05, None)
+                if method == 'GSEA':
+                    threshold = GSEA_SIGNIFICANT_THRESHOLD
+                else:
+                    threshold = SIGNIFICANT_THRESHOLD
+                filtered_df = _select_significant_entries(df, 'case/control comb_p', threshold, None)
                 TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(
                     true_answers, set(filtered_df.index.values))
                 row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1, TP_items, FP_items,
@@ -264,14 +268,14 @@ def get_auc_for_noise(reqd_scenarios, exp_results, true_answers):
 # Experiments with resampling peaks from real data
 ########################################################################################################################
 
-def run_resample_experiment(experiment_name, data_source, case, control, proportions, significant_column, n_iter,
+def run_resample_experiment(experiment_name, data_source, case, control, prob_missing_peaks, significant_column, n_iter,
                             plage_weight, hg_weight, gsea_resamples, gsea_ranking_method, parallel=False):
     res = {
         'experiment_name': experiment_name,
         'data_source': data_source,
         'case': case,
         'control': control,
-        'proportions': proportions,
+        'prob_missing_peaks': prob_missing_peaks,
         'n_iter': n_iter,
         'significant_column': significant_column,
         'experiment_results': {},
@@ -282,22 +286,22 @@ def run_resample_experiment(experiment_name, data_source, case, control, proport
     }
 
     # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
-    n_samples = proportions * data_source.get_measurements().shape[0]
+    n_samples = (1-prob_missing_peaks) * data_source.get_measurements().shape[0]
     n_samples = n_samples.astype(int)
-    for i in range(len(proportions)):
+    for i in range(len(prob_missing_peaks)):
         # calculate proportions of peaks to resample
-        prop = proportions[i]
+        prob = prob_missing_peaks[i]
         n_sample = n_samples[i]
         params = _get_resampled_params(case, control, data_source, gsea_resamples, gsea_ranking_method, hg_weight,
                                        n_sample, plage_weight)
-        logger.info('prop=%.2f n_sample=%d PALS experiment=%s case=%s control=%s' % (
-            prop, n_sample, experiment_name, case, control))
+        logger.info('prob_missing_peaks=%.2f n_sample=%d PALS experiment=%s case=%s control=%s' % (
+            prob, n_sample, experiment_name, case, control))
 
         if not parallel:
-            prop_results = []  # to store experiment results for this proportion
+            prob_results = []  # to store experiment results for this prob value
             for j in range(n_iter):
                 item = _get_resampled_performance(params)
-                prop_results.append(item)
+                prob_results.append(item)
         else:
             all_params = [params for j in range(n_iter)]
             import ipyparallel as ipp
@@ -305,9 +309,9 @@ def run_resample_experiment(experiment_name, data_source, case, control, proport
             dview = rc[:]  # use all engines​
             with dview.sync_imports():
                 pass
-            prop_results = dview.map_sync(_get_resampled_performance, all_params)
+            prob_results = dview.map_sync(_get_resampled_performance, all_params)
 
-        res['experiment_results'][prop] = prop_results
+        res['experiment_results'][prob] = prob_results
     return res
 
 
@@ -419,11 +423,11 @@ def evaluate_performance(res, true_answers, N=None):
     # evaluate the partial results w.r.t to the full results
     performances = []
     logger.debug('Evaluating partial results')
-    proportions = list(experiment_results.keys())
-    for prop in proportions:
-        iterations = range(len(experiment_results[prop]))
+    prob_missing_peaks = list(experiment_results.keys())
+    for prob in prob_missing_peaks:
+        iterations = range(len(experiment_results[prob]))
         for i in iterations:
-            item = experiment_results[prop][i]
+            item = experiment_results[prob][i]
 
             # for PALS
             method = 'PALS'
@@ -432,7 +436,7 @@ def evaluate_performance(res, true_answers, N=None):
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
             TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
                                                                                            set(partial.index.values))
-            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            perf = (method, prob, i, TP, FP, FN, prec, rec, f1)
             performances.append(perf)
 
             # for ORA
@@ -442,7 +446,7 @@ def evaluate_performance(res, true_answers, N=None):
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
             TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
                                                                                            set(partial.index.values))
-            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            perf = (method, prob, i, TP, FP, FN, prec, rec, f1)
             performances.append(perf)
 
             # for GSEA
@@ -452,12 +456,12 @@ def evaluate_performance(res, true_answers, N=None):
             partial = _select_significant_entries(partial_df, significant_column, GSEA_SIGNIFICANT_THRESHOLD, N)
             TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
                                                                                            set(partial.index.values))
-            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            perf = (method, prob, i, TP, FP, FN, prec, rec, f1)
             performances.append(perf)
 
     logger.debug('Done!')
     performance_df = pd.DataFrame(performances,
-                                  columns=['method', 'proportion', 'i', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1'])
+                                  columns=['method', 'missing_peaks', 'i', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1'])
     return performance_df
 
 
@@ -466,11 +470,11 @@ def get_auc_for_hat_data(res, true_answers):
     exp_res = res['experiment_results']
     significant_column = res['significant_column']
 
-    for prop in exp_res:
-        logger.debug('Processing %f' % prop)
-        prop_res = exp_res[prop]
-        for i in range(len(prop_res)):
-            method_res = prop_res[i]
+    for prob in exp_res:
+        logger.debug('Processing %f' % prob)
+        prob_res = exp_res[prob]
+        for i in range(len(prob_res)):
+            method_res = prob_res[i]
             for method in method_res:
                 pathway_df = method_res[method]
 
@@ -485,9 +489,9 @@ def get_auc_for_hat_data(res, true_answers):
                 true_answer_set = set(true_answer_df.index.values.tolist())
                 sorted_pr_df = compute_pr_curve(method, df, true_answer_set)
                 computed_auc = auc(sorted_pr_df['prec'], sorted_pr_df['rec'])  # compute auc
-                aucs.append((prop, i, method, computed_auc))
+                aucs.append((prob, i, method, computed_auc))
 
-    auc_df = pd.DataFrame(aucs, columns=['proportion', 'i', 'method', 'auc'])
+    auc_df = pd.DataFrame(aucs, columns=['missing_peaks', 'i', 'method', 'auc'])
     return auc_df
 
 

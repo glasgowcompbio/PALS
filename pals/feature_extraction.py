@@ -162,6 +162,14 @@ class DataSource(object):
     def get_experimental_design(self):
         return self.experimental_design.copy()
 
+    def get_data(self):
+        data = {
+            'pathway_dict': self.pathway_dict,
+            'entity_dict': self.entity_dict,
+            'mapping_dict': self.mapping_dict
+        }
+        return data
+
     def get_pathway_unique_counts(self, pathway_ids):
         """
         Returns the number of unique ids associated to each pathway
@@ -209,14 +217,16 @@ class DataSource(object):
         """
         measurement_df = self.get_measurements()
         annotation_df = self.get_annotations()
-        if axis == 0:
+        if axis == 0:  # sample rows
             sampled_measurement_df = measurement_df.sample(n_sample, axis=0, replace=False)
             sampled_annotation_df = annotation_df[annotation_df.index.isin(sampled_measurement_df.index)]
             experimental_design = self.get_experimental_design()
+            data = self.get_data() if self.database_name is None else None
             new_ds = DataSource(sampled_measurement_df, sampled_annotation_df, experimental_design, self.database_name,
-                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
+                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query, data,
+                                self.min_replace)
 
-        elif axis == 1:
+        elif axis == 1:  # sample columns
             assert case is not None, 'Case is required'
             assert control is not None, 'Control is required'
             samples_case = self.groups[case]
@@ -247,8 +257,10 @@ class DataSource(object):
             }
 
             # return a new DataSource
+            data = self.get_data() if self.database_name is None else None
             new_ds = DataSource(shuffled_df, annotation_df, experimental_design, self.database_name,
-                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query)
+                                self.reactome_species, self.reactome_metabolic_pathway_only, self.reactome_query, data,
+                                self.min_replace)
         return new_ds
 
     def standardize_intensity_df(self):

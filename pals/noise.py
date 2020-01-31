@@ -111,7 +111,7 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, p
     logger.debug('Dataset annotations = %d' % annotation_df.shape[0])
 
     # randomly sample (1-prob_missing_peaks) rows from annotation_df without replacement
-    annotation_df = annotation_df.sample(frac=(1 - prob_missing_peaks), replace=False)
+    # annotation_df = annotation_df.sample(frac=(1 - prob_missing_peaks), replace=False)
     logger.debug('Sampled annotations = %d with prob_missing_peaks=%.2f' % (annotation_df.shape[0], prob_missing_peaks))
 
     experimental_design = {
@@ -124,7 +124,9 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, p
         }
     }
     ds = DataSource(int_df, annotation_df, experimental_design, None, database=data, min_replace=min_replace)
-    return ds
+    n_sample = int((1 - prob_missing_peaks) * int_df.shape[0])
+    ds_resampled = ds.resample(n_sample, axis=0)
+    return ds_resampled
 
 
 def _get_database(int_df, pathway_names):
