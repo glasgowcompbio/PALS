@@ -7,11 +7,10 @@ from matplotlib.patches import PathPatch
 from sklearn.metrics import auc
 
 from .GSEA import GSEA
-from .GSEApy import GSEApy as GSEA
 from .ORA import ORA
 from .PALS import PALS
 from .common import SIGNIFICANT_THRESHOLD, MIN_REPLACE, set_log_level_info, set_log_level_debug, NUM_RESAMPLES, \
-    PLAGE_WEIGHT, HG_WEIGHT, set_log_level_warning
+    PLAGE_WEIGHT, HG_WEIGHT, GSEA_RANKING_SNR, GSEA_SIGNIFICANT_THRESHOLD
 from .noise import construct_intensity_df, add_random_peaks, convert_to_data_source
 
 
@@ -20,7 +19,7 @@ from .noise import construct_intensity_df, add_random_peaks, convert_to_data_sou
 ########################################################################################################################
 
 def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathway_names, num_iterations, plage_weight,
-                         hg_weight, gsea_resamples, reqd_scenarios, pbar=False, parallel=False):
+                         hg_weight, gsea_resamples, gsea_ranking_method, reqd_scenarios, parallel=False):
     pals_dfs = []
     ora_dfs = []
     gsea_dfs = []
@@ -37,7 +36,8 @@ def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathw
                                        percent=scenario['percent'], random=random, noise_std=scenario['noise_std'],
                                        prob_missing_peaks=scenario['prob_missing_peaks'],
                                        background_pathways=background_pathways, plage_weight=plage_weight,
-                                       hg_weight=hg_weight, gsea_resamples=gsea_resamples, pbar=pbar, parallel=parallel)
+                                       hg_weight=hg_weight, gsea_resamples=gsea_resamples,
+                                       gsea_ranking_method=gsea_ranking_method, parallel=parallel)
 
         df = construct_single_box_df(results, scenario['percent'], scenario['prob_missing_peaks'],
                                      scenario['noise_std'], 'PALS')
@@ -61,14 +61,14 @@ def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathw
 
 def calc_av_p_scores(case_fnames, control_fnames, pathway_names, num_iterations, percent=0, random=False, noise_mean=0,
                      noise_std=5, prob_missing_peaks=0.2, background_pathways=100, min_replace=MIN_REPLACE,
-                     plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT, gsea_resamples=NUM_RESAMPLES, parallel=False,
-                     pbar=False):
+                     plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT, gsea_resamples=NUM_RESAMPLES,
+                     gsea_ranking_method=GSEA_RANKING_SNR, parallel=False):
     sample_fnames = control_fnames + case_fnames
     set_log_level_info()
 
     # create num_iterations random data
-    params = _get_noise_params(background_pathways, case_fnames, control_fnames, gsea_resamples, hg_weight,
-                               min_replace, noise_mean, noise_std, pathway_names, pbar, percent, plage_weight,
+    params = _get_noise_params(background_pathways, case_fnames, control_fnames, gsea_resamples, gsea_ranking_method,
+                               hg_weight, min_replace, noise_mean, noise_std, pathway_names, percent, plage_weight,
                                prob_missing_peaks, random, sample_fnames)
     if not parallel:
         noise_results = []
@@ -94,20 +94,20 @@ def calc_av_p_scores(case_fnames, control_fnames, pathway_names, num_iterations,
     return results
 
 
-def _get_noise_params(background_pathways, case_fnames, control_fnames, gsea_resamples, hg_weight,
-                      min_replace, noise_mean, noise_std, pathway_names, pbar, percent, plage_weight,
+def _get_noise_params(background_pathways, case_fnames, control_fnames, gsea_resamples, gsea_ranking_method, hg_weight,
+                      min_replace, noise_mean, noise_std, pathway_names, percent, plage_weight,
                       prob_missing_peaks, random, sample_fnames):
     return {
         'background_pathways': background_pathways,
         'case_fnames': case_fnames,
         'control_fnames': control_fnames,
         'gsea_resamples': gsea_resamples,
+        'gsea_ranking_method': gsea_ranking_method,
         'hg_weight': hg_weight,
         'min_replace': min_replace,
         'noise_mean': noise_mean,
         'noise_std': noise_std,
         'pathway_names': pathway_names,
-        'pbar': pbar,
         'percent': percent,
         'plage_weight': plage_weight,
         'prob_missing_peaks': prob_missing_peaks,
@@ -122,12 +122,12 @@ def _get_noise_performance(params):
     control_fnames = params['control_fnames']
     sample_fnames = params['sample_fnames']
     gsea_resamples = params['gsea_resamples']
+    gsea_ranking_method = params['gsea_ranking_method']
     hg_weight = params['hg_weight']
     min_replace = params['min_replace'],
     noise_mean = params['noise_mean']
     noise_std = params['noise_std']
     pathway_names = params['pathway_names']
-    pbar = params['pbar']
     percent = params['percent']
     plage_weight = params['plage_weight']
     prob_missing_peaks = params['prob_missing_peaks']
@@ -149,7 +149,7 @@ def _get_noise_performance(params):
     pals_df = pals.get_pathway_df()
 
     # run GSEA
-    gsea = GSEA(ds, random_sets=gsea_resamples, pbar=pbar)
+    gsea = GSEA(ds, num_resamples=gsea_resamples, method=gsea_ranking_method)
     gsea_df = gsea.get_pathway_df()
 
     # store the results
@@ -194,7 +194,8 @@ def get_tp_fn_fn(reqd_scenarios, exp_results, true_answers):
                 filtered_df = _select_significant_entries(df, 'case/control comb_p', 0.05, None)
                 TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(
                     true_answers, set(filtered_df.index.values))
-                row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items]
+                row = [method, noise_std, percent, prob_missing_peaks, TP, FP, FN, prec, rec, f1, TP_items, FP_items,
+                       FN_items]
                 data.append(row)
 
     df = pd.DataFrame(data,
@@ -207,7 +208,8 @@ def compute_pr_curve(method, df, true_answers):
     pr_results = []
     for threshold in df['p_value'].unique():
         filtered_df = df[df['p_value'] <= threshold]
-        TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(true_answers, set(filtered_df.index.values))
+        TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(true_answers,
+                                                                                       set(filtered_df.index.values))
         row = (method, threshold, TP, FP, FN, prec, rec, f1)
         pr_results.append(row)
 
@@ -216,7 +218,7 @@ def compute_pr_curve(method, df, true_answers):
     return sorted_pr_df
 
 
-def get_auc(reqd_scenarios, exp_results, true_answers):
+def get_auc_for_noise(reqd_scenarios, exp_results, true_answers):
     significant_column = 'case/control comb_p'
     auc_results = []
     for i in range(len(reqd_scenarios)):
@@ -263,7 +265,7 @@ def get_auc(reqd_scenarios, exp_results, true_answers):
 ########################################################################################################################
 
 def run_resample_experiment(experiment_name, data_source, case, control, proportions, significant_column, n_iter,
-                            plage_weight, hg_weight, gsea_resamples, pbar=False, parallel=False):
+                            plage_weight, hg_weight, gsea_resamples, gsea_ranking_method, parallel=False):
     res = {
         'experiment_name': experiment_name,
         'data_source': data_source,
@@ -275,7 +277,8 @@ def run_resample_experiment(experiment_name, data_source, case, control, proport
         'experiment_results': {},
         'plage_weight': plage_weight,
         'hg_weight': hg_weight,
-        'gsea_resamples': gsea_resamples
+        'gsea_resamples': gsea_resamples,
+        'gsea_ranking_method': gsea_ranking_method
     }
 
     # vary the number of (mzML) samples, run the pathway analysis methods for n_iter
@@ -285,8 +288,8 @@ def run_resample_experiment(experiment_name, data_source, case, control, proport
         # calculate proportions of peaks to resample
         prop = proportions[i]
         n_sample = n_samples[i]
-        params = _get_resampled_params(case, control, data_source, gsea_resamples, hg_weight, n_sample,
-                                       plage_weight, pbar=pbar)
+        params = _get_resampled_params(case, control, data_source, gsea_resamples, gsea_ranking_method, hg_weight,
+                                       n_sample, plage_weight)
         logger.info('prop=%.2f n_sample=%d PALS experiment=%s case=%s control=%s' % (
             prop, n_sample, experiment_name, case, control))
 
@@ -308,16 +311,17 @@ def run_resample_experiment(experiment_name, data_source, case, control, proport
     return res
 
 
-def _get_resampled_params(case, control, data_source, gsea_resamples, hg_weight, n_sample, plage_weight, pbar):
+def _get_resampled_params(case, control, data_source, gsea_resamples, gsea_ranking_method, hg_weight, n_sample,
+                          plage_weight):
     params = {
         'case': case,
         'control': control,
         'data_source': data_source,
         'gsea_resamples': gsea_resamples,
+        'gsea_ranking_method': gsea_ranking_method,
         'hg_weight': hg_weight,
         'n_sample': n_sample,
         'plage_weight': plage_weight,
-        'pbar': pbar
     }
     return params
 
@@ -327,10 +331,10 @@ def _get_resampled_performance(params):
     control = params['control']
     data_source = params['data_source']
     gsea_resamples = params['gsea_resamples']
+    gsea_ranking_method = params['gsea_ranking_method']
     hg_weight = params['hg_weight']
     n_sample = params['n_sample']
     plage_weight = params['plage_weight']
-    pbar = params['pbar']
 
     # generate n_iter data sources, each time randomly drawing n_sample peaks
     ds_resampled = data_source.resample(n_sample, case=case, control=control, axis=0)
@@ -344,7 +348,7 @@ def _get_resampled_performance(params):
     pals_df = pals.get_pathway_df()
 
     # run GSEA on the resampled data
-    gsea = GSEA(ds_resampled, random_sets=gsea_resamples, pbar=pbar, case=case, control=control)
+    gsea = GSEA(ds_resampled, num_resamples=gsea_resamples, method=gsea_ranking_method, case=case, control=control)
     gsea_df = gsea.get_pathway_df()
 
     # store the results
@@ -357,7 +361,38 @@ def _get_resampled_performance(params):
     return item
 
 
-def evaluate_performance(results, experiment_name, N=None):
+def get_method_true_answers(res, N=None):
+    significant_column = res['significant_column']
+    ds = res['data_source']
+    plage_weight = res['plage_weight']
+    hg_weight = res['hg_weight']
+    gsea_resamples = res['gsea_resamples']
+    gsea_ranking_method = res['gsea_ranking_method']
+    case = res['case']
+    control = res['control']
+
+    # generate the true answers for each method
+    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
+    pals_full_df = pals.get_pathway_df()
+    pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+
+    ora = ORA(ds, case=case, control=control)
+    ora_full_df = ora.get_pathway_df()
+    ora_full = _select_significant_entries(ora_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+
+    gsea = GSEA(ds, num_resamples=gsea_resamples, method=gsea_ranking_method, case=case, control=control)
+    gsea_full_df = gsea.get_pathway_df()
+    gsea_full = _select_significant_entries(gsea_full_df, significant_column, GSEA_SIGNIFICANT_THRESHOLD, N)
+
+    method_true_answers = {
+        'PALS': pals_full,
+        'ORA': ora_full,
+        'GSEA': gsea_full,
+    }
+    return method_true_answers
+
+
+def evaluate_performance(res, true_answers, N=None):
     """
     Definition of precision and recall at N:
     Precision@N = (# of recommended items @N that are relevant) / (# of recommended items @N)
@@ -375,34 +410,14 @@ def evaluate_performance(results, experiment_name, N=None):
     Precision = TP/(TP+FP)
     Recall = TP/(TP+FN)
     """
-    logger.debug('Generating PALS full results')
-    res = results[experiment_name]
-    significant_column = res['significant_column']
     experiment_results = res['experiment_results']
-    ds = res['data_source']
-    plage_weight = res['plage_weight']
-    hg_weight = res['hg_weight']
-    gsea_resamples = res['gsea_resamples']
-    case = res['case']
-    control = res['control']
-    performances = []
-
-    # generate PALS full results
-    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
-    pals_full_df = pals.get_pathway_df()
-    pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-
-    # generate ORA full results
-    ora = ORA(ds, case=case, control=control)
-    ora_full_df = ora.get_pathway_df()
-    ora_full = _select_significant_entries(ora_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-
-    # generate GSEA full results
-    gsea = GSEA(ds, random_sets=gsea_resamples, pbar=False, case=case, control=control)
-    gsea_full_df = gsea.get_pathway_df()
-    gsea_full = _select_significant_entries(gsea_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
+    significant_column = res['significant_column']
+    pals_full = true_answers['PALS']
+    ora_full = true_answers['ORA']
+    gsea_full = true_answers['GSEA']
 
     # evaluate the partial results w.r.t to the full results
+    performances = []
     logger.debug('Evaluating partial results')
     proportions = list(experiment_results.keys())
     for prop in proportions:
@@ -415,29 +430,65 @@ def evaluate_performance(results, experiment_name, N=None):
             full = pals_full
             partial_df = item[method]
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
-                                                                         set(partial.index.values)))
+            TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
+                                                                                           set(partial.index.values))
+            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            performances.append(perf)
 
             # for ORA
             method = 'ORA'
             full = ora_full
             partial_df = item[method]
             partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
-                                                                         set(partial.index.values)))
+            TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
+                                                                                           set(partial.index.values))
+            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            performances.append(perf)
 
             # for GSEA
             method = 'GSEA'
             full = gsea_full
             partial_df = item[method]
-            partial = _select_significant_entries(partial_df, significant_column, SIGNIFICANT_THRESHOLD, N)
-            performances.append((method, prop, i) + _compute_prec_rec_f1(set(full.index.values),
-                                                                         set(partial.index.values)))
+            partial = _select_significant_entries(partial_df, significant_column, GSEA_SIGNIFICANT_THRESHOLD, N)
+            TP, FP, FN, prec, rec, f1, TP_items, FP_items, FN_items = _compute_prec_rec_f1(set(full.index.values),
+                                                                                           set(partial.index.values))
+            perf = (method, prop, i, TP, FP, FN, prec, rec, f1)
+            performances.append(perf)
 
     logger.debug('Done!')
     performance_df = pd.DataFrame(performances,
                                   columns=['method', 'proportion', 'i', 'TP', 'FP', 'FN', 'precision', 'recall', 'F1'])
     return performance_df
+
+
+def get_auc_for_hat_data(res, true_answers):
+    aucs = []
+    exp_res = res['experiment_results']
+    significant_column = res['significant_column']
+
+    for prop in exp_res:
+        logger.debug('Processing %f' % prop)
+        prop_res = exp_res[prop]
+        for i in range(len(prop_res)):
+            method_res = prop_res[i]
+            for method in method_res:
+                pathway_df = method_res[method]
+
+                df = pathway_df.sort_values(significant_column, ascending=False)
+                df = df.rename(columns={significant_column: 'p_value'})
+                try:
+                    df = df[['pw_name', 'p_value', 'sf', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
+                except KeyError:
+                    df = df[['pw_name', 'p_value', 'unq_pw_F', 'tot_ds_F', 'F_coverage']]
+
+                true_answer_df = true_answers[method]
+                true_answer_set = set(true_answer_df.index.values.tolist())
+                sorted_pr_df = compute_pr_curve(method, df, true_answer_set)
+                computed_auc = auc(sorted_pr_df['prec'], sorted_pr_df['rec'])  # compute auc
+                aucs.append((prop, i, method, computed_auc))
+
+    auc_df = pd.DataFrame(aucs, columns=['proportion', 'i', 'method', 'auc'])
+    return auc_df
 
 
 def _select_significant_entries(pathway_df, significant_column, threshold, N):
