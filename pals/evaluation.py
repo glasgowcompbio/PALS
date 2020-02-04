@@ -192,7 +192,7 @@ def get_tp_fn_fn(reqd_scenarios, exp_results, true_answers):
             dataframes = results[method]
             for df in dataframes:
                 if method == 'GSEA':
-                    threshold = GSEA_SIGNIFICANT_THRESHOLD
+                    threshold = SIGNIFICANT_THRESHOLD
                 else:
                     threshold = SIGNIFICANT_THRESHOLD
                 filtered_df = _select_significant_entries(df, 'case/control comb_p', threshold, None)
