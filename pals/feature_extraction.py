@@ -26,7 +26,7 @@ class DataSource(object):
         :param experimental_design: a dictionary specifying the experimental design
         :param database_name: the database name (with .json extension) used to load database in the data folder
         """
-        self.measurement_df = measurement_df
+        self.measurement_df = measurement_df.astype(float)
         self.annotation_df = annotation_df
         self.experimental_design = experimental_design
         self.database_name = database_name
