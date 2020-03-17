@@ -15,18 +15,10 @@ statsmodels = "*"
 loguru = "*"
 requests = "*"
 neo4j-driver = "*"
-pywin32 = {version = "!= 226",sys_platform = "== 'win32'"} # https://github.com/mhammond/pywin32/issues/1439
 bioservices = "*"
 tqdm = "*"
 ipyparallel = "*"
 gseapy = "*"
-
-[dev-packages]
-rpy2 = {version = "*",sys_platform = "!= 'win32'"}
-rpy2_win = {path = "./whl/rpy2-2.9.5-cp37-cp37m-win_amd64.whl",sys_platform = "== 'win32'"}
-qtconsole = "*"
-pyqt5 = "*"
-tzlocal = "*"
 
 [requires]
 python_version = "3"
