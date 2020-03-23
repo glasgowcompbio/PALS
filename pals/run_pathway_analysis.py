@@ -43,10 +43,8 @@ def build_parser():
     parser.add_argument('--comparisons', required=True, type=pair, nargs='+')
 
     # common parameters
-    parser.add_argument('--min_replace', type=float, default=5000.0,
+    parser.add_argument('--min_replace', type=float, default=MIN_REPLACE,
                         help='Minimum intensity of MS1 peaks for data imputation  (default: %(default)s)')
-    parser.add_argument('--plage_weight', type=float, default=5.0, help=' (default: %(default)s)')
-    parser.add_argument('--hg_weight', type=float, default=1.0, help=' (default: %(default)s)')
 
     # reactome parameters
     parser.add_argument('--species', default=REACTOME_SPECIES_HOMO_SAPIENS, help='Species name',
@@ -152,8 +150,6 @@ def main(args):
     # extract other args
     database_name = args['db']
     min_replace = args['min_replace']
-    plage_weight = args['plage_weight']
-    hg_weight = args['hg_weight']
     reactome_species = args['species']
     reactome_metabolic_pathway_only = not args['use_all_reactome_pathways']
     reactome_query = args['connect_to_reactome_server']
@@ -167,16 +163,21 @@ def main(args):
     # run the selected pathway analysis method
     method = None
     if args['method'] == PATHWAY_ANALYSIS_PALS:
-        method = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
+        method = PALS(ds)
     elif args['method'] == PATHWAY_ANALYSIS_ORA:
         method = ORA(ds)
     assert method is not None
 
     # save the results
-    pathway_df = method.get_pathway_df()
+    df = method.get_pathway_df()
+
+    # filter results to show only the columns we want
+    df.drop(columns=['sf', 'exp_F', 'Ex_Cov'], inplace=True)
+    df = df[df.columns.drop(list(df.filter(regex='comb_p')))]
+
     output_file = args['output_file']
     logger.info('Saving PALS results to %s' % output_file)
-    pathway_df.to_csv(output_file)
+    df.to_csv(output_file)
 
 
 if __name__ == '__main__':

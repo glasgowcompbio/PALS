@@ -50,7 +50,10 @@ class PALS(object):
         measurement_df = self.data_source.get_measurements()
         activity_df = self.get_plage_activity_df(measurement_df, standardize)
         if resample:
-            plage_df = self.set_up_resample_plage_p_df(activity_df)
+            with warnings.catch_warnings():
+                # FIXME: not sure if this is the best thing to do
+                warnings.filterwarnings('ignore')
+                plage_df = self.set_up_resample_plage_p_df(activity_df)
         else:
             plage_df = self.set_up_plage_p_df(activity_df)
         pathway_df = self.calculate_hg_values(plage_df)
@@ -109,7 +112,7 @@ class PALS(object):
                 null_max_tvalues.append(max(permutation_tvalues))
                 null_min_tvalues.append(min(permutation_tvalues))
             stop = timeit.default_timer()
-            logger.debug('Total time %d' % (stop - start))
+            # logger.debug('Total time %d' % (stop - start))
             tvalues = self._calculate_t_values(activity_df, comparison_samples[0], comparison_samples[1])
             pvalues = self._compare_resamples(tvalues, null_max_tvalues, null_min_tvalues)
             all_pvalues.append(pvalues)
@@ -173,7 +176,7 @@ class PALS(object):
         :param pathway_df: a dataframe containing PLAGE scores and coverage for pathways
         :return: pathway_df with the hg scores and combined p-values added
         """
-        logger.debug("Calculating the hyper-geometric p-values")
+        # logger.debug("Calculating the hyper-geometric p-values")
         # Calculate the hg scores and create a temporary df to merge with the main df
         p_value_list = []
         mapids = pathway_df.index.values.tolist()
@@ -213,7 +216,7 @@ class PALS(object):
         pathway_df_merge['Ex_Cov'] = ((pathway_df_merge['exp_F']) / pathway_df_merge['unq_pw_F']) * 100
         pathway_df_merge.Ex_Cov = pathway_df_merge.Ex_Cov.round(2)
 
-        logger.debug("Calculating the combined p-values")
+        # logger.debug("Calculating the combined p-values")
 
         # Make a combined_p df to merge with the main df
         column_names = []
