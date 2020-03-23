@@ -5,14 +5,17 @@ import os
 import pathlib
 import pickle
 import sys
+from collections import defaultdict
+from io import StringIO
 
+import pandas as pd
 from loguru import logger
 
 PW_F_OFFSET = 1
 MIN_REPLACE = 5000
 NUM_RESAMPLES = 1000
 PLAGE_WEIGHT = 1
-HG_WEIGHT = 0 # TODO: remove this?
+HG_WEIGHT = 0  # TODO: remove this?
 SIGNIFICANT_THRESHOLD = 0.05
 GSEA_SIGNIFICANT_THRESHOLD = 0.25
 
@@ -39,6 +42,7 @@ REACTOME_SPECIES_SUS_SCROFA = 'Sus scrofa'
 
 PATHWAY_ANALYSIS_PALS = 'PALS'
 PATHWAY_ANALYSIS_ORA = 'ORA'
+PATHWAY_ANALYSIS_GSEA = 'GSEA'
 
 GSEA_RANKING_SNR = 'signal_to_noise'
 GSEA_RANKING_LOGFC = 'log2_ratio_of_classes'
@@ -122,3 +126,70 @@ def is_comparison_used(comp, selected_case, selected_control):
         if selected_case != comp_case or selected_control != comp_control:
             return False
     return True
+
+
+def load_data(intensity_csv, annotation_csv, gui=False):
+    """
+    Loads PALS data from csv files
+    :param intensity_csv: a CSV file of peak intensities
+    :param annotation_csv: a CSV file of peak annotation
+    :return: the peak intensity df, annotation df, and also grouping information
+    """
+    # load intensity dataframe from csv
+    # skip the second row containing group information
+    # set the first column (peak ids) in csv to be the index
+
+    if gui: # load data for GUI (Streamlit)
+        lines = [line for line in intensity_csv]
+        filtered_lines = [line for idx, line in enumerate(lines) if idx != 1]
+        intensities = StringIO('\n'.join(filtered_lines))
+        int_df = pd.read_csv(intensities, skiprows=[1], index_col=0)
+        groups = _parse_groups(lines)
+        logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
+        logger.debug('Loaded groups: %s' % groups)
+
+    else:  # for command-line use
+        int_df = pd.read_csv(intensity_csv, skiprows=[1], index_col=0)
+        groups = get_groups(intensity_csv)
+        logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
+        logger.debug('Loaded groups: %s' % groups)
+
+    # load annotation dataframe from csv, setting the first column to be the index
+    annotation_df = pd.read_csv(annotation_csv, index_col=0)
+    logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
+
+    return int_df, annotation_df, groups
+
+
+def get_groups(csv_file):
+    """
+    Extract group information from peak intensity csv file
+    :param csv_file: An input CSV file.
+    The first row in the CSV file should contain samples information.
+    The second row in the CSV file should contain grouping information.
+    :return: a dictionary where key is the group name and values are the samples under that group
+    """
+    with open(csv_file, 'r') as f:
+        lines = f.readlines()
+        grouping = _parse_groups(lines)
+        return grouping
+
+
+def _parse_groups(lines):
+    grouping = defaultdict(list)
+    # extract the first and second lines containing samples and grouping information
+    samples = None
+    groups = None
+    for i, line in enumerate(lines):
+        if i == 0:
+            samples = line.strip().split(',')
+        if i == 1:
+            groups = line.strip().split(',')
+            break
+    assert samples is not None, 'Missing samples line'
+    assert groups is not None, 'Missing groups line'
+    for sample, group in zip(samples, groups):
+        if group == 'group':  # skip the column header containing the word 'group'
+            continue
+        grouping[group].append(sample)
+    return dict(grouping)

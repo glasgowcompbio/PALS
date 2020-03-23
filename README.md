@@ -19,7 +19,7 @@ To use Reactome as pathway database, refer to the [setup guide](setup_guide.md).
 
 The most basic usage of PALS is to run it in offline-mode, which uses the downloaded KEGG database for pathways. Here we run PALS on a test beer data.
 
-***TODO: replace this with the HAT data in the manuscript***
+***TODO: replace this with the HAT data in the manuscript?***
 
 $ `python pals/run.py PALS notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db PiMP_KEGG --comparisons beer1/beer2 beer3/beer4`
 
@@ -31,8 +31,44 @@ Finally in online mode, PALS can connect to a Reactome database instance to retr
 
 $ `python pals/run.py notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db COMPOUND --comparisons beer1/beer2 beer3/beer4 --min_replace 5000 --species "Homo sapiens"  --use_all_reactome_pathways --connect_to_reactome_server`
 
+***TODO: describe output***
+
 ### Example Results
 
 ### Other Pathway Analysis Methods
 
 ORA, GSEA ..
+
+### Graphical User Interface
+
+An experimental user interface on top of the [Streamlit](https://www.streamlit.io/) framework is also available and can be used as an alternative to the command-line interface.
+![GUI](images/Capture.PNG?raw=true "Data Explorer")
+
+To run it, type:
+```
+streamlit run pals/run_gui.py
+```
+
+### Usage in other applications
+
+PALS can be easily imported and used in other Python application. 
+***TODO: write better documentation***
+
+```
+from pals.ORA import ORA
+from pals.PALS import PALS
+from pals.common import *
+from pals.feature_extraction import DataSource
+
+ds = DataSource(int_df, annotation_df, experimental_design, database_name,
+                reactome_species=reactome_species,
+                reactome_metabolic_pathway_only=reactome_metabolic_pathway_only,
+                reactome_query=reactome_query, min_replace=min_replace)
+
+method = PALS(ds)
+# method = ORA(ds) 
+
+df = method.get_pathway_df()
+```
+
+The dataframe `df` contains the results from performing pathway analysis.

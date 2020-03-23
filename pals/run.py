@@ -2,10 +2,7 @@
 
 import sys
 from argparse import ArgumentParser
-from collections import defaultdict
 from pathlib import Path
-
-import pandas as pd
 
 sys.path.append('.')
 
@@ -65,63 +62,10 @@ def build_parser():
                             REACTOME_SPECIES_SUS_SCROFA
                         ))
     parser.add_argument('--use_all_reactome_pathways', default=False, action='store_true',
-                        help='Limit pathway queries to Reactome metabolic pathways only.')
+                        help='Limit to Reactome metabolic pathways only.')
     parser.add_argument('--connect_to_reactome_server', default=False, action='store_true',
-                        help='Query pathways by connecting to a Neo4j server hosting Reactome database.')
+                        help='Connect to a Neo4j (Reactome) database.')
     return parser
-
-
-def load_data(intensity_csv, annotation_csv):
-    """
-    Loads PALS data from csv files
-    :param intensity_csv: a CSV file of peak intensities
-    :param annotation_csv: a CSV file of peak annotation
-    :return: the peak intensity df, annotation df, and also grouping information
-    """
-    # load intensity dataframe from csv
-    # skip the second row containing group information
-    # set the first column (peak ids) in csv to be the index
-    int_df = pd.read_csv(intensity_csv, skiprows=[1], index_col=0)
-    logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
-
-    # load annotation dataframe from csv, setting the first column to be the index
-    annotation_df = pd.read_csv(annotation_csv, index_col=0)
-    logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
-
-    # extract grouping information from csv
-    groups = get_groups(intensity_csv)
-    logger.debug('Loaded groups: %s' % groups)
-
-    return int_df, annotation_df, groups
-
-
-def get_groups(csv_file):
-    """
-    Extract group information from peak intensity csv file
-    :param csv_file: An input CSV file.
-    The first row in the CSV file should contain samples information.
-    The second row in the CSV file should contain grouping information.
-    :return: a dictionary where key is the group name and values are the samples under that group
-    """
-    grouping = defaultdict(list)
-    with open(csv_file, 'r') as f:
-        # extract the first and second lines containing samples and grouping information
-        samples = None
-        groups = None
-        for i, line in enumerate(f):
-            if i == 0:
-                samples = line.strip().split(',')
-            if i == 1:
-                groups = line.strip().split(',')
-                break
-
-        assert samples is not None, 'Missing samples line'
-        assert groups is not None, 'Missing groups line'
-        for sample, group in zip(samples, groups):
-            if group == 'group':  # skip the column header containing the word 'group'
-                continue
-            grouping[group].append(sample)
-    return dict(grouping)
 
 
 def main(args):
