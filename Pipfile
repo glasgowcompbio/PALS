@@ -15,10 +15,12 @@ statsmodels = "*"
 loguru = "*"
 requests = "*"
 neo4j-driver = "*"
-bioservices = "*"
-tqdm = "*"
-ipyparallel = "*"
 gseapy = "*"
+streamlit = "*"
+
+[dev-packages]
+bioservices = "*"
+ipyparallel = "*"
 
 [requires]
 python_version = "3"
