@@ -21,15 +21,15 @@ The most basic usage of PALS is to run it in offline-mode, which uses the downlo
 
 ***TODO: replace this with the HAT data in the manuscript***
 
-$ `python pals\run_pathway_analysis.py PALS notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db PiMP_KEGG --comparisons beer1/beer2 beer3/beer4`
+$ `python pals/run.py PALS notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db PiMP_KEGG --comparisons beer1/beer2 beer3/beer4`
 
 Downloaded Reactome pathways is also provided in PALS for the [most common species](https://github.com/glasgowcompbio/PALS/tree/master/pals/data/reactome/metabolic_pathways/COMPOUND). Note that only metabolic pathways are available in this mode. Below shows an example run using Human pathways.
  
-$ `python run_pals.py notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db COMPOUND --comparisons beer1/beer2 beer3/beer4 --min_replace 5000 --species "Homo sapiens"`
+$ `python pals/run.py notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db COMPOUND --comparisons beer1/beer2 beer3/beer4 --min_replace 5000 --species "Homo sapiens"`
 
 Finally in online mode, PALS can connect to a Reactome database instance to retrieve the most updated pathways. The flag `--use_all_reactome_pathways` specifies that all pathways should be used (not just metabolic pathways), while the flag `--connect_to_reactome_server` defines that online mode should be used.
 
-$ `python run_pals.py notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db COMPOUND --comparisons beer1/beer2 beer3/beer4 --min_replace 5000 --species "Homo sapiens"  --use_all_reactome_pathways --connect_to_reactome_server`
+$ `python pals/run.py notebooks/test_data/beer/int_df.csv notebooks/test_data/beer/annotation_df.csv test_output.csv --db COMPOUND --comparisons beer1/beer2 beer3/beer4 --min_replace 5000 --species "Homo sapiens"  --use_all_reactome_pathways --connect_to_reactome_server`
 
 ### Example Results
 

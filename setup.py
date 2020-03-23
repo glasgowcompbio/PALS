@@ -15,7 +15,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    scripts=['pals/run_pathway_analysis.py'],
+    scripts=['pals/run.py'],
     python_requires='>=3.6',
     packages=find_packages(),
     package_data={
