@@ -2,6 +2,7 @@
 
 import sys
 
+import requests
 import streamlit as st
 
 sys.path.append('.')
@@ -12,8 +13,30 @@ from pals.common import *
 from pals.feature_extraction import DataSource
 
 
+# https://discuss.streamlit.io/t/custom-render-widths/81/8
+def max_width():
+    max_width_str = f"max-width: 2000px;"
+    st.markdown(
+        f"""
+    <style>
+    .reportview-container .main .block-container{{
+        {max_width_str}
+    }}
+    </style>    
+    """,
+        unsafe_allow_html=True,
+    )
+
+
 def main():
-    st.title('Pathway Activity Level Scoring (PALS)')
+    st.title('Pathway Activity Level Scoring (PALS) :twisted_rightwards_arrows:')
+    st.write(
+        'Understanding changing pathways can be incredibly useful in the interpretation and understanding of complex '
+        'datasets from metabolomics experiments. PALS is a Python package to perform the ranking of '
+        'significantly-changing metabolite pathways in different experimental conditions through the decomposition of '
+        'pathway activity levels calculated from peak intensities.')
+    st.write('To begin, please upload your intensity and annotation matrices from the sidebar. Select a case and'
+             'control group, the pathway analysis method as well as the database to use.')
 
     intensity_csv = st.sidebar.file_uploader("Choose an intensity CSV file", type=['txt', 'csv'])
     annotation_csv = st.sidebar.file_uploader("Choose an annotation CSV file", type=['txt', 'csv'])
@@ -46,8 +69,8 @@ def main():
         )
         database_name = st.sidebar.selectbox(
             ('Database'),
-            (DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_REACTOME_UNIPROT,
-             DATABASE_REACTOME_ENSEMBL)
+            (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_PIMP_KEGG, DATABASE_REACTOME_UNIPROT,
+             DATABASE_REACTOME_ENSEMBL),
         )
         min_replace = st.sidebar.number_input('Minimum intensity for data imputation', value=MIN_REPLACE)
 
@@ -83,7 +106,7 @@ def main():
                 index=human_idx
             )
             reactome_metabolic_pathway_only = st.sidebar.checkbox('Limit to metabolic pathways only.', value=True)
-            reactome_query = st.sidebar.checkbox('Connect to a Neo4j (Reactome) database.', value=False)
+            reactome_query = st.sidebar.checkbox('Connect to a Reactome Neo4j database (Online Mode).', value=False)
 
         significant_column = '%s/%s p-value' % (case, control)
         ds = DataSource(int_df, annotation_df, experimental_design, database_name,
@@ -96,7 +119,7 @@ def main():
         else:
             df = pathway_analysis(significant_column, selected_method, ds)
             st.success('Pathway analysis successful!')
-            process_results(significant_column, df)
+            process_results(significant_column, df, use_reactome)
 
 
 @st.cache
@@ -122,11 +145,102 @@ def pathway_analysis(significant_column, selected_method, ds):
     return df
 
 
-def process_results(significant_column, df):
+@st.cache
+def send_to_reactome(stId):
+    # refer to https://reactome.org/dev/content-service
+    url = 'https://reactome.org/ContentService/data/query/%s' % stId
+    logger.debug('Reactome URL: ' + url)
+
+    # make a GET request to Reactome Content service
+    response = requests.get(url)
+    logger.debug('Response status code = %d' % response.status_code)
+
+    status_code = response.status_code
+    if status_code == 200:
+        json_response = json.loads(response.text)
+    else:
+        json_response = None
+    return status_code, json_response
+
+
+def process_results(significant_column, df, use_reactome):
+    # reorder and rename columns
+    df = df[['pw_name', significant_column, 'tot_ds_F', 'unq_pw_F', 'F_coverage']]
+    df = df.rename(columns={
+        'pw_name': 'Pathways',
+        'unq_pw_F': 'Pathway Formula',
+        'tot_ds_F': 'Formula Hits',
+        'F_coverage': 'Formula Coverage (%)'
+    })
+
+    # write header -- pathway ranking
+    st.header('Pathway Ranking')
+    st.write(' The following table shows a ranking of pathways based on their activity levels. Entries in the table can'
+             ' be filtered by p-values and the number of formula hits for each pathway.')
+
     # filter by significant p-values
-    threshold = st.slider('Specify p-value threshold', min_value=0.0, max_value=1.0, value=0.05, step=0.01)
-    df = df[df[significant_column] <= threshold]
+    pval_threshold = st.slider('Filter pathways with p-values less than', min_value=0.0, max_value=1.0, value=0.05,
+                               step=0.01)
+    df = df[df[significant_column] <= pval_threshold]
+
+    # filter by formula hits
+    min_hits = 1
+    max_hits = max(df['Formula Hits'])
+    formula_threshold = st.slider('Filter pathways with formula hits at least', min_value=min_hits, max_value=max_hits,
+                                  value=2, step=1)
+    df = df[df['Formula Hits'] >= formula_threshold]
+
     st.write(df)
 
+    if use_reactome:
+        # write header -- pathway info
+        st.header('Pathway Information')
+        st.write('The following shows additional information on the selected pathways.')
 
+        choices = []
+        for idx, row in df.iterrows():
+            pw_name = row['Pathways']
+            choices.append('%s (%s)' % (pw_name, idx))
+        options = st.multiselect(
+            'Select pathways', choices)
+
+        for pw in options:
+            tokens = pw.split('(')
+            pw_name = tokens[0].strip()
+            stId = tokens[1].strip()
+            stId = stId[:-1]  # remove last ')' character from stId
+
+            status_code, json_response = send_to_reactome(stId)
+            if status_code == 200:
+                logger.debug(json_response)
+
+                # st.subheader(pw)
+                link_label = '%s (%s)' % (pw_name, stId)
+                link_url = 'https://reactome.org/content/detail/%s' % stId
+                st.write('### [%s](%s)' % (link_label, link_url))
+
+                row = df.loc[stId]
+                pvalue = row[significant_column]
+                num_hits = row['Formula Hits']
+                subsubheader = '#### p-value: %.4f' % pvalue
+                st.write(subsubheader)
+                subsubheader = '#### Formula Hits: %d' % (num_hits)
+                st.write(subsubheader)
+
+                st.write('#### Summary:')
+                for summation in json_response['summation']:
+                    summary = summation['text']
+                    st.write(summary)
+
+                image_url = 'https://reactome.org/ContentService/exporter/diagram/%s.png?quality=8&' \
+                            'diagramProfile=standard&analysisProfile=strosobar' % stId
+                st.image(image_url, use_column_width=True)
+
+                # for event in json_response['hasEvent']:
+                #     name = event['name'][0]
+                #     species = event['speciesName']
+                #     event_str = '- %s (%s)' % (name, species)
+                #     st.write(event_str)
+
+max_width()
 main()
