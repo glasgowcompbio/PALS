@@ -239,7 +239,7 @@ def process_results(significant_column, df, use_reactome, token):
                 image_url = 'https://reactome.org/ContentService/exporter/diagram/%s.png?quality=8' \
                             '&diagramProfile=standard&analysisProfile=strosobar' % stId
                 if token is not None:
-                    image_url += '&token=%s' % token
+                    image_url += '&token=%s&resource=TOTAL&expColumn=0' % token
                 logger.debug('image_url = %s' % image_url)
                 st.image(image_url, use_column_width=True)
 
