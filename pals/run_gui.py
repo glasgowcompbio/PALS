@@ -251,6 +251,7 @@ def process_results(significant_column, df, use_reactome, token):
                 #     st.write(event_str)
 
 
+@st.cache
 def send_expression_data(ds, case, control, species):
     # send expression data to reactome for diagram exporter
     int_df = ds.change_zero_peak_ints()
