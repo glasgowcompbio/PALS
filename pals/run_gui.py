@@ -179,7 +179,7 @@ def process_results(significant_column, df, use_reactome, token):
 
     # filter by significant p-values
     pval_threshold = st.slider('Filter pathways with p-values less than', min_value=0.0, max_value=1.0, value=0.05,
-                               step=0.01)
+                               step=0.05)
     df = df[df[significant_column] <= pval_threshold]
 
     # filter by formula hits
@@ -195,7 +195,7 @@ def process_results(significant_column, df, use_reactome, token):
         # write header -- pathway info
         st.header('Pathway Browser')
         st.write('To display additional information on significantly changing pathways, please select them in'
-                 ' the selection below.')
+                 ' the list below. Entries in the list are in ascending order of their pathway activity p-values.')
 
         choices = []
         for idx, row in df.iterrows():
@@ -285,10 +285,9 @@ def send_expression_data(ds, case, control, species):
     status_code, json_response = send_reactome_expression_data(expression_data, encoded_species)
     if status_code == 200:
         pathways_df, reactome_url, reactome_token = parse_reactome_json(json_response)
-        logger.debug('reactome_url = %s' % reactome_url)
-        logger.debug('reactome_token = %s' % reactome_token)
         return reactome_token
     else:
+        st.warning('Failed to submit expression data to Reactome.org (status_code=%d)' % status_code)
         return None
 
 
@@ -315,11 +314,11 @@ def send_reactome_expression_data(data, encoded_species):
     # refer to https://reactome.org/AnalysisService/#/identifiers/getPostTextUsingPOST
     url = 'https://reactome.org/AnalysisService/identifiers/?interactors=false&species=' + encoded_species + \
           '&sortBy=ENTITIES_PVALUE&order=ASC&resource=TOTAL&pValue=1&includeDisease=true'
-    logger.debug('Reactome URL: ' + url)
+    logger.debug('POSTing expression data to Reactome Analysis Service: ' + url)
 
     # make a POSt request to Reactome Analysis service
     response = requests.post(url, headers={'Content-Type': 'text/plain'}, data=data.encode('utf-8'))
-    logger.debug('Response status code = %d' % response.status_code)
+    logger.debug('Received HTTP status code: %d' % response.status_code)
 
     status_code = response.status_code
     if status_code == 200:
@@ -335,8 +334,7 @@ def parse_reactome_json(json_response):
     pathways = json_response['pathways']
 
     reactome_url = 'https://reactome.org/PathwayBrowser/#DTAB=AN&ANALYSIS=' + token
-    logger.debug('Pathway analysis token: ' + token)
-    logger.debug('Pathway analysis URL: ' + reactome_url)
+    logger.debug('Received expression analysis token: ' + token)
 
     # https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
     pathways_df = pd.json_normalize(pathways, sep='_')
