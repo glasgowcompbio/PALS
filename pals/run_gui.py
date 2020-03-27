@@ -167,6 +167,7 @@ def process_results(significant_column, df, use_reactome, token):
     df = df[['pw_name', significant_column, 'tot_ds_F', 'unq_pw_F', 'F_coverage']]
     df = df.rename(columns={
         'pw_name': 'Pathways',
+        significant_column: 'p-value',
         'unq_pw_F': 'Pathway Formula',
         'tot_ds_F': 'Formula Hits',
         'F_coverage': 'Formula Coverage (%)'
@@ -180,7 +181,7 @@ def process_results(significant_column, df, use_reactome, token):
     # filter by significant p-values
     pval_threshold = st.slider('Filter pathways with p-values less than', min_value=0.0, max_value=1.0, value=0.05,
                                step=0.05)
-    df = df[df[significant_column] <= pval_threshold]
+    df = df[df['p-value'] <= pval_threshold]
 
     # filter by formula hits
     min_hits = 1
@@ -195,7 +196,7 @@ def process_results(significant_column, df, use_reactome, token):
         # write header -- pathway info
         st.header('Pathway Browser')
         st.write('To display additional information on significantly changing pathways, please select them in'
-                 ' the list below. Entries in the list are in ascending order of their pathway activity p-values.')
+                 ' the list below. Entries are listed in ascending order according to their pathway activity p-values.')
 
         choices = []
         for idx, row in df.iterrows():
@@ -224,9 +225,9 @@ def process_results(significant_column, df, use_reactome, token):
                 st.write(header_markdown)
 
                 row = df.loc[stId]
-                pvalue = row[significant_column]
+                p_value = row['p-value']
                 num_hits = row['Formula Hits']
-                subsubheader = '#### p-value: %.4f' % pvalue
+                subsubheader = '#### p-value: %.4f' % p_value
                 st.write(subsubheader)
                 subsubheader = '#### Formula Hits: %d' % (num_hits)
                 st.write(subsubheader)
