@@ -9,7 +9,6 @@ import streamlit as st
 
 sys.path.append('.')
 
-import pals
 from pals.ORA import ORA
 from pals.PALS import PALS
 from pals.GSEA import GSEA
@@ -130,7 +129,7 @@ def main():
                 df = pathway_analysis_pals(ds)
             elif selected_method == PATHWAY_ANALYSIS_ORA:
                 df = pathway_analysis_ora(ds)
-            elif selected_method == PATHWAY_ANALYSIS_GSEA: # FIXME: GSEA doesn't work yet
+            elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
                 df = pathway_analysis_gsea(ds)
             assert df is not None
 
@@ -191,6 +190,10 @@ def process_results(df, significant_column):
 
     # reorder and rename columns
     df = df[['pw_name', significant_column, 'tot_ds_F', 'unq_pw_F', 'F_coverage']]
+
+    # https://stackoverflow.com/questions/54770993/formatting-numeric-columns-of-a-pandas-data-frame-with-a-specified-number-of-dec
+    df['F_coverage'] = (np.floor(df['F_coverage'] * 100) / 100).map('{:,.2f}'.format)
+
     df = df.rename(columns={
         'pw_name': 'Pathways',
         significant_column: 'p-value',
@@ -202,7 +205,6 @@ def process_results(df, significant_column):
 
 
 def show_results(df, use_reactome, token):
-
     # write header -- pathway ranking
     st.header('Pathway Ranking')
     st.write(' The following table shows a ranking of pathways based on their activity levels. Entries in the table can'
@@ -222,25 +224,25 @@ def show_results(df, use_reactome, token):
 
     st.write(df)
 
-    if use_reactome:
-        # write header -- pathway info
-        st.header('Pathway Browser')
-        st.write('To display additional information on significantly changing pathways, please select them in'
-                 ' the list below. Entries are listed in ascending order according to their pathway activity p-values.')
+    # write header -- pathway info
+    st.header('Pathway Browser')
+    st.write('To display additional information on significantly changing pathways, please select them in'
+             ' the list below. Entries are listed in ascending order according to their pathway activity p-values.')
 
-        choices = []
-        for idx, row in df.iterrows():
-            pw_name = row['Pathways']
-            choices.append('%s (%s)' % (pw_name, idx))
-        options = st.multiselect(
-            'Select pathways', choices)
+    choices = []
+    for idx, row in df.iterrows():
+        pw_name = row['Pathways']
+        choices.append('%s (%s)' % (pw_name, idx))
+    options = st.multiselect(
+        'Select pathways', choices)
 
-        for pw in options:
-            tokens = pw.split('(')
-            pw_name = tokens[0].strip()
-            stId = tokens[1].strip()
-            stId = stId[:-1]  # remove last ')' character from stId
+    for pw in options:
+        tokens = pw.split('(')
+        pw_name = tokens[0].strip()
+        stId = tokens[1].strip()
+        stId = stId[:-1]  # remove last ')' character from stId
 
+        if use_reactome:
             status_code, json_response = get_reactome_info(stId)
             if status_code == 200:
                 # logger.debug(json_response)
@@ -280,6 +282,36 @@ def show_results(df, use_reactome, token):
                 #     species = event['speciesName']
                 #     event_str = '- %s (%s)' % (name, species)
                 #     st.write(event_str)
+
+        else:  # if not reactome, assume it's KEGG
+
+            # st.subheader(pw)
+            label = '%s: %s' % (stId, pw_name)
+            info_url = 'https://www.genome.jp/dbget-bin/www_bget?%s' % stId
+            header_markdown = '### %s [[info]](%s)' % (label, info_url)
+            st.write(header_markdown)
+
+            row = df.loc[stId]
+            p_value = row['p-value']
+            num_hits = row['Formula Hits']
+            subsubheader = '#### p-value: %.4f' % p_value
+            st.write(subsubheader)
+            subsubheader = '#### Formula Hits: %d' % (num_hits)
+            st.write(subsubheader)
+
+            from bioservices.kegg import KEGG
+            k = KEGG()
+
+            st.write('#### Summary:')
+            data = k.get(stId)
+            dict_data = k.parse(data)
+            for k, v in dict_data.items():
+                if k in ['CLASS', 'MODULE', 'DISEASE', 'REL_PATHWAY']:
+                    st.write(k, ': ', v)
+
+            image_url = 'https://www.genome.jp/kegg/pathway/map/%s.png' % stId
+            logger.debug('image_url = %s' % image_url)
+            st.image(image_url, use_column_width=True)
 
 
 @st.cache
