@@ -129,7 +129,6 @@ def main():
             process_results(significant_column, df, use_reactome, token)
 
 
-@st.cache
 def get_data_source(annotation_df, database_name, experimental_design, int_df, min_replace,
                     reactome_metabolic_pathway_only, reactome_query, reactome_species):
     ds = DataSource(int_df, annotation_df, experimental_design, database_name,
