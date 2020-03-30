@@ -1,3 +1,4 @@
+import copy
 import timeit
 import warnings
 from random import shuffle
@@ -25,7 +26,7 @@ class PALS(object):
         :param plage_weight: the weight for PLAGE (intensity) component when combining p-values
         :param hg_weight: the weight for hypergeometric component when combining p-values
         """
-        self.data_source = data_source
+        self.data_source = copy.deepcopy(data_source)
         self.num_resamples = num_resamples
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and

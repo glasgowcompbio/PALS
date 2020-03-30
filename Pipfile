@@ -15,7 +15,7 @@ statsmodels = "*"
 loguru = "*"
 requests = "*"
 neo4j-driver = "*"
-gseapy = "*"
+gseapy = "==0.9.16"
 streamlit = "*"
 
 [dev-packages]

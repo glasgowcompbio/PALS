@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pandas as pd
 from gseapy.gsea import GSEA
@@ -34,7 +36,7 @@ class GSEA(object):
         :param pbar: whether to show progress bar or not
         """
         logger.debug('GSEA initialised with num_resamples=%d and ranking_method=%s' % (num_resamples, method))
-        self.data_source = data_source
+        self.data_source = copy.deepcopy(data_source)
         self.num_resamples = num_resamples
         self.method = method
         self.case = case
@@ -113,8 +115,8 @@ class GSEA(object):
             verbose = False
 
             msea = MSEA(data, gene_sets, cls, outdir, min_size, max_size, permutation_num,
-                      weighted_score_type, permutation_type, method, ascending, processes,
-                      figsize, format, graph_num, no_plot, seed, verbose)
+                        weighted_score_type, permutation_type, method, ascending, processes,
+                        figsize, format, graph_num, no_plot, seed, verbose)
             msea.run()
 
             # convert GSEA results to dataframe

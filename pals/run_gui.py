@@ -9,8 +9,10 @@ import streamlit as st
 
 sys.path.append('.')
 
+import pals
 from pals.ORA import ORA
 from pals.PALS import PALS
+from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
 
@@ -70,7 +72,9 @@ def main():
 
         selected_method = st.sidebar.selectbox(
             'Pathway Analysis Method',
-            (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA)
+            # (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA), # FIXME: add GSEA
+            (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA),
+            index=0
         )
         database_name = st.sidebar.selectbox(
             ('Database'),
@@ -120,15 +124,26 @@ def main():
         if len(ds.dataset_pathways) == 0:
             st.error('No matching pathways found for this data. Ensure that the database and species are correct.')
         else:
-            df = pathway_analysis(significant_column, selected_method, ds)
-            st.success('Pathway analysis successful!')
+            # st.write('Calling pathway_analysis(', ds, ',', selected_method)
+            df = None
+            if selected_method == PATHWAY_ANALYSIS_PALS:
+                df = pathway_analysis_pals(ds)
+            elif selected_method == PATHWAY_ANALYSIS_ORA:
+                df = pathway_analysis_ora(ds)
+            elif selected_method == PATHWAY_ANALYSIS_GSEA: # FIXME: GSEA doesn't work yet
+                df = pathway_analysis_gsea(ds)
+            assert df is not None
+
+            df = process_results(df, significant_column)
+            # st.success('Pathway analysis successful!')
 
             token = None
             if use_reactome:
                 token = send_expression_data(ds, case, control, reactome_species)
-            process_results(significant_column, df, use_reactome, token)
+            show_results(df, use_reactome, token)
 
 
+@st.cache
 def get_data_source(annotation_df, database_name, experimental_design, int_df, min_replace,
                     reactome_metabolic_pathway_only, reactome_query, reactome_species):
     ds = DataSource(int_df, annotation_df, experimental_design, database_name,
@@ -138,17 +153,32 @@ def get_data_source(annotation_df, database_name, experimental_design, int_df, m
     return ds
 
 
-@st.cache
-def pathway_analysis(significant_column, selected_method, ds):
-    method = None
-    if selected_method == PATHWAY_ANALYSIS_PALS:
-        method = PALS(ds)
-    elif selected_method == PATHWAY_ANALYSIS_ORA:
-        method = ORA(ds)
-    assert method is not None
-
+@st.cache(suppress_st_warning=True)
+def pathway_analysis_pals(ds):
+    # st.write('Cache miss: pathway_analysis_pals(', ds, ') ran')
+    method = PALS(ds)
     df = method.get_pathway_df()
+    return df
 
+
+@st.cache(suppress_st_warning=True)
+def pathway_analysis_ora(ds):
+    # st.write('Cache miss: pathway_analysis_ora(', ds, ') ran')
+    method = ORA(ds)
+    df = method.get_pathway_df()
+    return df
+
+
+@st.cache(suppress_st_warning=True)
+def pathway_analysis_gsea(ds):
+    # st.write('Cache miss: pathway_analysis_gsea(', ds, ') ran')
+    method = GSEA(ds)
+    df = method.get_pathway_df()
+    return df
+
+
+@st.cache
+def process_results(df, significant_column):
     # filter results to show only the columns we want
     try:
         df = df.drop(columns=['sf', 'exp_F', 'Ex_Cov'])
@@ -158,10 +188,7 @@ def pathway_analysis(significant_column, selected_method, ds):
 
     # sort column
     df = df.sort_values(significant_column)
-    return df
 
-
-def process_results(significant_column, df, use_reactome, token):
     # reorder and rename columns
     df = df[['pw_name', significant_column, 'tot_ds_F', 'unq_pw_F', 'F_coverage']]
     df = df.rename(columns={
@@ -171,6 +198,10 @@ def process_results(significant_column, df, use_reactome, token):
         'tot_ds_F': 'Formula Hits',
         'F_coverage': 'Formula Coverage (%)'
     })
+    return df
+
+
+def show_results(df, use_reactome, token):
 
     # write header -- pathway ranking
     st.header('Pathway Ranking')
