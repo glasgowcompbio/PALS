@@ -1,8 +1,8 @@
 # PALS
 
-### Motivation
-
 <iframe width="560" height="315" src="https://www.youtube.com/embed/XP4wsoInh4E" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+### Motivation
 
 Understanding changing pathways can be incredibly useful in the interpretation and understanding of complex datasets from metabolomics experiments. While there is an abundance of tools for enrichment analysis of genomics data, those suitable for metabolomic pathway analysis are still relatively scarce.  Many of the available metabolomic tools perform simple over-representation analysis and do not fully utilise valuable mass-spectrometry peak intensity data. In addition, it is often difficult to integrate these tools into a Python-based workflow and incorporate complex experimental designs.
 
