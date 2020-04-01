@@ -99,7 +99,7 @@ def load_obj(filename):
         with gzip.GzipFile(filename, 'rb') as f:
             return pickle.load(f)
     except OSError:
-        logger.warning('Old, invalid or missing pickle in %s. Please regenerate this file.' % filename)
+        logger.warning('Old, invalid or missing pickle in %s. Being regenerated.' % filename)
         return None
 
 

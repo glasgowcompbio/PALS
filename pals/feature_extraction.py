@@ -193,6 +193,34 @@ class DataSource(object):
                 counts.append(0)
         return counts
 
+
+    def get_pathway_unique_formula_dict(self, pathway_ids):
+        """
+        :param pathway_ids: The Ids of the pathways that the formuals are required from
+        :return: a pathway_id: dataset formulas dictionary.
+        """
+        pwy_formula_dict = {}
+
+        for pathway_id in pathway_ids:
+
+            ds_formulas = self.pathway_to_unique_ids_dict[pathway_id].intersection(self.dataset_unique_ids)
+            pwy_formula_dict[pathway_id]=ds_formulas
+
+        return pwy_formula_dict
+
+    def get_pathway_unique_cmpd_ids(self, pathway_ids):
+        """
+        :param pathway_ids:  The Ids of the pathways that the cmpds are required for
+        :return: a pathway_id: [compound_ids] dictionary
+        """
+        reaction_to_cmpd_id_dict = {}
+
+        for pw_id in pathway_ids:
+            key_list = set([k for k, v in self.mapping_dict.items() if pw_id in v])
+            reaction_to_cmpd_id_dict[pw_id] = key_list
+
+        return reaction_to_cmpd_id_dict
+
     def get_comparison_samples(self, comp):
         """
         Given a comparison, e.g. {'case': 'beer1', 'control': 'beer2', 'name': 'beer1/beer2'}
