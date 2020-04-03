@@ -6,6 +6,7 @@ from urllib.parse import quote
 import numpy as np
 import requests
 import streamlit as st
+from bioservices.kegg import KEGG
 
 sys.path.append('.')
 
@@ -32,7 +33,7 @@ def max_width():
 
 
 def main():
-    st.title('Pathway Activity Level Scoring (PALS) :twisted_rightwards_arrows:')
+    st.title('Pathway Activity Level Scoring (PALS) Viewer :twisted_rightwards_arrows:')
     st.write(
         'Understanding changing pathways can be incredibly useful in the interpretation and understanding of complex '
         'datasets from metabolomics experiments. PALS is a Python package to perform the ranking of '
@@ -299,14 +300,11 @@ def show_results(df, use_reactome, token):
             subsubheader = '#### Formula Hits: %d' % (num_hits)
             st.write(subsubheader)
 
-            from bioservices.kegg import KEGG
-            k = KEGG()
-
             st.write('#### Summary:')
-            data = k.get(stId)
-            dict_data = k.parse(data)
+            dict_data = get_kegg_info(stId)
             for k, v in dict_data.items():
-                if k in ['CLASS', 'MODULE', 'DISEASE', 'REL_PATHWAY']:
+                # if k in ['CLASS', 'MODULE', 'DISEASE', 'REL_PATHWAY']:
+                if k in ['CLASS']:
                     st.write(k, ': ', v)
 
             image_url = 'https://www.genome.jp/kegg/pathway/map/%s.png' % stId
@@ -403,6 +401,14 @@ def parse_reactome_json(json_response):
     # https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
     pathways_df = pd.json_normalize(pathways, sep='_')
     return pathways_df, reactome_url, token
+
+
+@st.cache
+def get_kegg_info(stId):
+    k = KEGG()
+    data = k.get(stId)
+    dict_data = k.parse(data)
+    return dict_data
 
 
 max_width()
