@@ -39,9 +39,9 @@ def main():
         'datasets from metabolomics experiments. PALS is a Python package to perform the ranking of '
         'significantly-changing metabolite pathways in different experimental conditions through the decomposition of '
         'pathway activity levels calculated from peak intensities.')
-    st.write('To begin, please upload your intensity ([example](https://raw.githubusercontent.com/glasgowcompbio/PALS/'
-             'master/notebooks/test_data/beer/int_df.csv)) and annotation ([example](https://raw.githubusercontent.com/'
-             'glasgowcompbio/PALS/master/notebooks/test_data/beer/annotation_df.csv)) matrices from the sidebar. Next, '
+    st.write('To begin, please upload your intensity ([example](https://github.com/glasgowcompbio/PALS/raw/master/'
+             'notebooks/test_data/HAT/int_df.csv)) and annotation ([example](https://raw.githubusercontent.com/'
+             'glasgowcompbio/PALS/master/notebooks/test_data/HAT/annotation_df.csv)) matrices from the sidebar. Next, '
              'select a case and control group, the pathway analysis method as well as the database to use. PALS will '
              'perform pathway analysis and display the results below.')
 
