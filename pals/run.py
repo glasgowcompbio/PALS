@@ -29,8 +29,8 @@ def build_parser():
     parser = ArgumentParser(description="Run Pathway Analysis")
 
     # required parameters
-    parser.add_argument('method', default=PATHWAY_ANALYSIS_PALS, help='Pathway Analysis Method',
-                        choices=(PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA)),
+    parser.add_argument('method', default=PATHWAY_ANALYSIS_PLAGE, help='Pathway Analysis Method',
+                        choices=(PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA)),
     parser.add_argument('intensity_csv', type=Path, help='Intensity CSV file')
     parser.add_argument('annotation_csv', type=Path, help='Annotation CSV file')
     parser.add_argument('output_file', type=Path, help='PALS analysis output')
@@ -106,7 +106,7 @@ def main(args):
 
     # run the selected pathway analysis method
     method = None
-    if args['method'] == PATHWAY_ANALYSIS_PALS:
+    if args['method'] == PATHWAY_ANALYSIS_PLAGE:
         method = PALS(ds)
     elif args['method'] == PATHWAY_ANALYSIS_ORA:
         method = ORA(ds)

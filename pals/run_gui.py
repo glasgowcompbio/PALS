@@ -72,7 +72,7 @@ def main():
         selected_method = st.sidebar.selectbox(
             'Pathway Analysis Method',
             # (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA), # FIXME: add GSEA
-            (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA),
+            (PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA),
             index=0
         )
         database_name = st.sidebar.selectbox(
@@ -125,7 +125,7 @@ def main():
         else:
             # st.write('Calling pathway_analysis(', ds, ',', selected_method)
             df = None
-            if selected_method == PATHWAY_ANALYSIS_PALS:
+            if selected_method == PATHWAY_ANALYSIS_PLAGE:
                 df = pathway_analysis_pals(ds)
             elif selected_method == PATHWAY_ANALYSIS_ORA:
                 df = pathway_analysis_ora(ds)
