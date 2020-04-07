@@ -140,7 +140,7 @@ PALS Viewer is a user-friendly graphical user interface to run PALS and analyse 
 inspect significantly changing pathways. It can be run using the following command:
 
 To run it, type:
-```shell script
+```
 $ streamlit run pals/run_gui.py
 ```
 
@@ -150,7 +150,7 @@ An online instance of PALS Viewer can also be accessed from ... **(TODO)**
 
 PALS can be imported as a Python library and incorporated into your own Python application. This is illustrated in the 
 following code snippet:
-```python
+```
 from pals.ORA import ORA
 from pals.PALS import PALS
 from pals.common import *
@@ -194,7 +194,7 @@ also described above.
 The experimental design data in `experimental_design` contains information on **groups**, which relates all samples in 
 a particular experimental factor together as well as **comparisons**, which describes the desired comparisons for the 
 PALS analysis in terms of a case and a control. An example of this can be found below:
-```python
+```
 experimental_design = {
     'comparisons': [
         {'case': 'beer1', 'control': 'beer2', 'name':  'beer1/beer2'},
