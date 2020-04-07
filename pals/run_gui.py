@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import base64
 import sys
 from urllib.parse import quote
 
@@ -223,6 +223,7 @@ def show_results(df, use_reactome, token):
                                   value=2, step=1)
     df = df[df['Formula Hits'] >= formula_threshold]
 
+    st.markdown(get_table_download_link(df), unsafe_allow_html=True)
     st.write(df)
 
     # write header -- pathway info
@@ -409,6 +410,19 @@ def get_kegg_info(stId):
     data = k.get(stId)
     dict_data = k.parse(data)
     return dict_data
+
+
+# https://discuss.streamlit.io/t/how-to-set-file-download-function/2141
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(
+        csv.encode()
+    ).decode()  # some strings <-> bytes conversions necessary here
+    return f'<a href="data:file/csv;base64,{b64}" download="results.csv">Download csv file</a>'
 
 
 max_width()
