@@ -126,7 +126,7 @@ pathway ranking results as well as inspect significantly changing pathways. It c
 $ streamlit run pals/run_gui.py
 ```
 
-An online instance of PALS Viewer can also be accessed from ... **(TODO)**
+An online instance of PALS Viewer can also be accessed from http://134.122.111.79:8501/ (temporary server).
 
 ### 7. Usage in other applications
 
