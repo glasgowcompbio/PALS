@@ -8,6 +8,7 @@ sys.path.append('.')
 
 from pals.ORA import ORA
 from pals.PALS import PALS
+from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
 
@@ -30,7 +31,7 @@ def build_parser():
 
     # required parameters
     parser.add_argument('method', default=PATHWAY_ANALYSIS_PLAGE, help='Pathway Analysis Method',
-                        choices=(PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA)),
+                        choices=(PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA)),
     parser.add_argument('intensity_csv', type=Path, help='Intensity CSV file')
     parser.add_argument('annotation_csv', type=Path, help='Annotation CSV file')
     parser.add_argument('output_file', type=Path, help='PALS analysis output')
@@ -110,14 +111,28 @@ def main(args):
         method = PALS(ds)
     elif args['method'] == PATHWAY_ANALYSIS_ORA:
         method = ORA(ds)
+    elif args['method'] == PATHWAY_ANALYSIS_GSEA:
+        method = GSEA(ds)
     assert method is not None
 
     # save the results
     df = method.get_pathway_df()
 
     # filter results to show only the columns we want
-    df.drop(columns=['sf', 'exp_F', 'Ex_Cov'], inplace=True)
+    try:
+        df.drop(columns=['sf', 'exp_F', 'Ex_Cov'], inplace=True)
+    except KeyError:
+        pass
+
+    # drop all columns containing 'comb_p' since now they should be the same as the uncombined columns
+    # (after we have removed the hypergeometric weights)
     df = df[df.columns.drop(list(df.filter(regex='comb_p')))]
+
+    # sort by pw_name case-insensitive
+    # https://stackoverflow.com/questions/41656623/pandas-dataframe-sort-ignoring-the-case
+    df['temp'] = df['pw_name'].str.upper()
+    df.sort_values('temp', inplace=True)
+    del df['temp']
 
     output_file = args['output_file']
     logger.info('Saving PALS results to %s' % output_file)
