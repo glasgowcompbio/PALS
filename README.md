@@ -5,8 +5,7 @@
 ### 1. Introduction
 
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
-Activity Level Scoring)**, a complete end-to-end tool that performs database queries of pathways, decomposition of activity levels as well as presenting and
-interpreting pathway activity results. 
+Activity Level Scoring)**, a complete end-to-end tool that performs database queries of pathways, decomposition of activity levels as well as presenting and interpreting pathway activity results. To access our interactive Web application *PALS Viewer*, please visit [http://134.122.111.79:8501/](http://134.122.111.79:8501/) (temporary server).
 
 ![PALS](images/overall_schematic.png?raw=true "PALS")
 
@@ -125,8 +124,6 @@ pathway ranking results as well as inspect significantly changing pathways. It c
 ```
 $ streamlit run pals/run_gui.py
 ```
-
-An online instance of PALS Viewer can also be accessed from http://134.122.111.79:8501/ (temporary server).
 
 ### 7. Usage in other applications
 
