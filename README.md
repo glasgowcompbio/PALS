@@ -2,25 +2,13 @@
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/XP4wsoInh4E" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-### 1. Abstract
+### 1. Introduction
 
-Understanding changing pathways can be incredibly useful in the interpretation and understanding of complex datasets from 
-metabolomics experiments. While there is an abundance of tools for enrichment analysis of genomics data, those suitable 
-for metabolomic pathway analysis are still relatively scarce.  Many of the available metabolomic tools perform simple 
-over-representation analysis and do not fully utilise valuable mass-spectrometry peak intensity data. In addition, it 
-is often difficult to integrate these tools into a Python-based workflow and incorporate complex experimental designs.
-
-Here we present **PALS (Pathway Activity Level Scoring)**, a Python library to perform the ranking of significantly-changing 
-metabolite pathways in different experimental conditions. PALS achieves this through the decomposition of pathway activity 
-levels calculated from peak intensities. PALS can operate either in an offline mode by using previously downloaded KEGG 
-and Reactome databases, or in an online mode by utilising a local Reactome service to retrieve the most up-to-date pathways. 
+Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
+Activity Level Scoring)**, a complete end-to-end tool that performs database queries of pathways, decomposition of activity levels as well as presenting and
+interpreting pathway activity results. 
 
 ![PALS](images/overall_schematic.png?raw=true "PALS")
-
-Results from running a PALS analysis can be exported as a comma-separated file or viewed interactively in an online Web platform. 
-A comparison of PALS with two other commonly used methods for metabolomic pathway analysis (ORA and GSEA) is also given, 
-and reveals that PALS is more robust to missing peaks and noisy data than the alternatives. Additionally, PALS is used 
-to analyse pathways from a study of Human African Trypanosomiasis and the results reported.
 
 ### 2. Installation
 
@@ -42,9 +30,9 @@ usage: run.py [-h] --db {PiMP_KEGG,COMPOUND,ChEBI,UniProt,ENSEMBL}
               Drosophila melanogaster,Gallus gallus,Homo sapiens,Mus musculus,
               Oryza sativa,Rattus norvegicus,Saccharomyces cerevisiae,Sus scrofa}]
               [--use_all_reactome_pathways] [--connect_to_reactome_server]
-              {PLAGE,ORA} intensity_csv annotation_csv output_file
+              {PLAGE,ORA,GSEA} intensity_csv annotation_csv output_file
 ```
-- **method**: Pathway ranking method to use, e.g. PLAGE or ORA.
+- **method**: Pathway ranking method to use, e.g. PLAGE, ORA or GSEA.
 - **intensity_csv**: Input intensity CSV file
 - **annotation\_csv**: Input annotation CSV file
 - **output_file**: Output pathway ranking file.
@@ -128,18 +116,12 @@ row_id,entity_id
 
 ### 5. Other Pathway Analysis Methods
 
-ORA and GSEA are both included in PALS, and can be used for comparison. For more details, please refer to our paper.
+ORA and GSEA are used as comparisons and are both included in PALS, and can be used for comparison. For more details, please refer to our paper.
 
-### 6. Graphical User Interface
+### 6. Web Interface
 
-An experimental user interface on top of the [Streamlit](https://www.streamlit.io/) framework is also available and can 
-be used as an alternative to the command-line interface.
-![GUI](images/pals_viewer.png?raw=true "PALS Viewer")
-
-PALS Viewer is a user-friendly graphical user interface to run PALS and analyse pathway ranking results as well as 
-inspect significantly changing pathways. It can be run using the following command:
-
-To run it, type:
+PALS Viewer is a Web interface on top of the [Streamlit](https://www.streamlit.io/) framework to run PALS, analyse 
+pathway ranking results as well as inspect significantly changing pathways. It can be run using the following command:
 ```
 $ streamlit run pals/run_gui.py
 ```
