@@ -14,7 +14,7 @@ from scipy.stats import ttest_ind
 from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used
 
 
-class PALS(object):
+class PLAGE(object):
 
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT,
                  case=None, control=None):
@@ -305,8 +305,8 @@ class PALS(object):
         c1 = activity_df.loc[:, condition_1].values
         c2 = activity_df.loc[:, condition_2].values
 
-        m1, n1, var1 = PALS._tstats(c1)
-        m2, n2, var2 = PALS._tstats(c2)
+        m1, n1, var1 = PLAGE._tstats(c1)
+        m2, n2, var2 = PLAGE._tstats(c2)
 
         se_total = np.sqrt(var1 / n1 + var2 / n2)
         se_total[se_total == 0.0] = np.nan

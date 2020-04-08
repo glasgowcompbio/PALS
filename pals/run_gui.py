@@ -11,7 +11,7 @@ from bioservices.kegg import KEGG
 sys.path.append('.')
 
 from pals.ORA import ORA
-from pals.PALS import PALS
+from pals.PLAGE import PLAGE
 from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
@@ -157,7 +157,7 @@ def get_data_source(annotation_df, database_name, experimental_design, int_df, m
 @st.cache(suppress_st_warning=True)
 def pathway_analysis_pals(ds):
     # st.write('Cache miss: pathway_analysis_pals(', ds, ') ran')
-    method = PALS(ds)
+    method = PLAGE(ds)
     df = method.get_pathway_df()
     return df
 

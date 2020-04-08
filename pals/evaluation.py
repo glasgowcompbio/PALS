@@ -8,7 +8,7 @@ from sklearn.metrics import auc
 
 from .GSEA import GSEA
 from .ORA import ORA
-from .PALS import PALS
+from .PLAGE import PLAGE
 from .common import SIGNIFICANT_THRESHOLD, MIN_REPLACE, set_log_level_info, set_log_level_debug, NUM_RESAMPLES, \
     PLAGE_WEIGHT, HG_WEIGHT, GSEA_RANKING_SNR, GSEA_SIGNIFICANT_THRESHOLD
 from .noise import construct_intensity_df, add_random_peaks, convert_to_data_source
@@ -145,7 +145,7 @@ def _get_noise_performance(params):
     ora_df = ora.get_pathway_df(correct_multiple_tests=True)
 
     # run PALS
-    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight)
+    pals = PLAGE(ds, plage_weight=plage_weight, hg_weight=hg_weight)
     pals_df = pals.get_pathway_df()
 
     # run GSEA
@@ -348,7 +348,7 @@ def _get_resampled_performance(params):
     ora_df = ora.get_pathway_df()
 
     # run PALS on the resampled data
-    pals = PALS(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
+    pals = PLAGE(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
     pals_df = pals.get_pathway_df()
 
     # run GSEA on the resampled data
@@ -376,7 +376,7 @@ def get_method_true_answers(res, N=None):
     control = res['control']
 
     # generate the true answers for each method
-    pals = PALS(ds, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
+    pals = PLAGE(ds, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
     pals_full_df = pals.get_pathway_df()
     pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
 

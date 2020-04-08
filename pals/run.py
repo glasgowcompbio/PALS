@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.append('.')
 
 from pals.ORA import ORA
-from pals.PALS import PALS
+from pals.PLAGE import PLAGE
 from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
@@ -108,7 +108,7 @@ def main(args):
     # run the selected pathway analysis method
     method = None
     if args['method'] == PATHWAY_ANALYSIS_PLAGE:
-        method = PALS(ds)
+        method = PLAGE(ds)
     elif args['method'] == PATHWAY_ANALYSIS_ORA:
         method = ORA(ds)
     elif args['method'] == PATHWAY_ANALYSIS_GSEA:
