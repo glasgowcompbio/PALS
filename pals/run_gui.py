@@ -45,9 +45,11 @@ def main():
              'select a case and control group, the pathway analysis method as well as the database to use. PALS will '
              'perform pathway analysis and display the results below.')
 
+    st.sidebar.subheader('Input Files')
     intensity_csv = st.sidebar.file_uploader("Choose an intensity CSV file", type=['txt', 'csv'])
     annotation_csv = st.sidebar.file_uploader("Choose an annotation CSV file", type=['txt', 'csv'])
     if intensity_csv is not None and annotation_csv is not None:  # data is loaded
+        st.sidebar.subheader('Comparisons')
         int_df, annotation_df, groups = load_data(intensity_csv, annotation_csv, gui=True)
         choices = sorted(list(groups.keys()))
         case = st.sidebar.selectbox(
@@ -71,6 +73,7 @@ def main():
             ]
         }
 
+        st.sidebar.subheader('Method')
         selected_method = st.sidebar.selectbox(
             'Pathway Analysis Method',
             # (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA), # FIXME: add GSEA
@@ -93,6 +96,7 @@ def main():
         reactome_metabolic_pathway_only = False
         reactome_query = False
         if use_reactome:
+            st.sidebar.subheader('Reactome')
             species_list = (
                 REACTOME_SPECIES_ARABIDOPSIS_THALIANA,
                 REACTOME_SPECIES_BOS_TAURUS,
