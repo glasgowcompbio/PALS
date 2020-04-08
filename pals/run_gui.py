@@ -49,14 +49,15 @@ def main():
     annotation_csv = st.sidebar.file_uploader("Choose an annotation CSV file", type=['txt', 'csv'])
     if intensity_csv is not None and annotation_csv is not None:  # data is loaded
         int_df, annotation_df, groups = load_data(intensity_csv, annotation_csv, gui=True)
+        choices = sorted(list(groups.keys()))
         case = st.sidebar.selectbox(
             'Case',
-            list(groups.keys()),
+            choices,
             index=0
         )
         control = st.sidebar.selectbox(
             'Control',
-            list(groups.keys()),
+            choices,
             index=1
         )
         experimental_design = {
@@ -328,16 +329,19 @@ def send_expression_data(ds, case, control, species):
     control_df = np.log2(df[control_cols])
     lfcs = np.mean(case_df, axis=1) - np.mean(control_df, axis=1)
 
-    # if there are multiple values for each compound, take the largest fold-change (in either direction) to display
+    # for each compound, compute the average fold changes if there are multiple values
     # TODO: we need a better way to do this
-    fold_changes = {}
+    temp = defaultdict(list)
     for idx, lfc in lfcs.iteritems():
-        if idx not in fold_changes:
-            fold_changes[idx] = lfc
-        else:
-            if abs(lfc) > abs(fold_changes[idx]):
-                fold_changes[idx] = lfc
+        temp[idx].append(lfc)
 
+    fold_changes = {}
+    for idx in temp:
+        mean = np.mean(temp[idx])
+        # logger.debug(idx, mean)
+        fold_changes[idx] = mean
+
+    # create expression dataframe to send to reactome
     expression_df = pd.DataFrame.from_dict(fold_changes.items()).set_index(0)
     expression_df = expression_df.rename(columns={1: 'log_FC'})
     expression_df.index.name = '#id'
