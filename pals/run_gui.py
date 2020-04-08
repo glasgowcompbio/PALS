@@ -52,16 +52,20 @@ def main():
         st.sidebar.subheader('Comparisons')
         int_df, annotation_df, groups = load_data(intensity_csv, annotation_csv, gui=True)
         choices = sorted(list(groups.keys()))
-        case = st.sidebar.selectbox(
-            'Case',
-            choices,
-            index=0
-        )
         control = st.sidebar.selectbox(
             'Control',
             choices,
+            index=0
+        )
+        case = st.sidebar.selectbox(
+            'Case',
+            choices,
             index=1
         )
+        if case == control:
+            st.error("Control ('%s') cannot be the same as case ('%s')." % (control, case))
+            return
+
         experimental_design = {
             'groups': groups,
             'comparisons': [
@@ -128,24 +132,25 @@ def main():
 
         if len(ds.dataset_pathways) == 0:
             st.error('No matching pathways found for this data. Ensure that the database and species are correct.')
-        else:
-            # st.write('Calling pathway_analysis(', ds, ',', selected_method)
-            df = None
-            if selected_method == PATHWAY_ANALYSIS_PLAGE:
-                df = pathway_analysis_pals(ds)
-            elif selected_method == PATHWAY_ANALYSIS_ORA:
-                df = pathway_analysis_ora(ds)
-            elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
-                df = pathway_analysis_gsea(ds)
-            assert df is not None
+            return
 
-            df = process_results(df, significant_column)
-            # st.success('Pathway analysis successful!')
+        # st.write('Calling pathway_analysis(', ds, ',', selected_method)
+        df = None
+        if selected_method == PATHWAY_ANALYSIS_PLAGE:
+            df = pathway_analysis_pals(ds)
+        elif selected_method == PATHWAY_ANALYSIS_ORA:
+            df = pathway_analysis_ora(ds)
+        elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
+            df = pathway_analysis_gsea(ds)
+        assert df is not None
 
-            token = None
-            if use_reactome:
-                token = send_expression_data(ds, case, control, reactome_species)
-            show_results(df, use_reactome, token)
+        df = process_results(df, significant_column)
+        # st.success('Pathway analysis successful!')
+
+        token = None
+        if use_reactome:
+            token = send_expression_data(ds, case, control, reactome_species)
+        show_results(df, use_reactome, token)
 
 
 @st.cache
