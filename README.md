@@ -5,15 +5,15 @@
 ### 1. Introduction
 
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
-Activity Level Scoring)**, a complete end-to-end tool that performs database queries of pathways, decomposition of activity levels as well as presenting and interpreting pathway activity results. 
+Activity Level Scoring)**, a complete tool that performs database queries of pathways, decomposes activity levels in pathways via the PLAGE method, as well as presents the results in a user-friendly manner. The results are found to be more robust to noise and missing peaks compared to the alternatives (ORA, GSEA). This is particularly important for metabolomics peak data, where noise and missing peaks are prevalent.
 
-To access our interactive Web application *PALS Viewer*, please visit [http://134.122.111.79:8501/](http://134.122.111.79:8501/) (temporary server).
+**To access our interactive Web application *PALS Viewer*, please visit [http://134.122.111.79:8501/](http://134.122.111.79:8501/) (temporary server).**
 
 ![PALS](images/overall_schematic.png?raw=true "PALS")
 
 ### 2. Installation
 
-For the latest bleeding-edge version, check out this repository using Git.
+For the latest development version, check out this repository using Git.
 Otherwise PALS can also be installed via `pip install PALS-pathway`.
 
 To use Reactome as pathway database, refer to the [setup guide](setup_guide.md).
@@ -80,8 +80,8 @@ of `tot_ds_F` to `unq_pw_F`.
 
 ### 4. File format and data imputation
 
-The first input users have to provide is a matrix is of individual peak intensities where rows are peak features with 
-column one containing the peak id and further columns representing individual samples. If using the CSV file, the second 
+Users provide two input files to PALS. The first is a matrix is of individual peak intensities (rows are peak features with 
+column one containing the peak id, further columns representing individual samples). If using the CSV file, the second 
 line can be used to indicate which groups this sample belongs to. For example, the intensity matrix takes the form of:
 ```
 row_id,Beer_1_full1.mzXML,Beer_1_full2.mzXML,Beer_1_full3.mzXML,
@@ -95,7 +95,7 @@ group,beer1,beer1,beer1,beer2,beer2,beer2,beer3,beer3,beer3,beer4,beer4,beer4
     38257776,37701920,40871888,33304766,31536296,31024098
 ```
 
-Data imputation is performed as such to the intensity matrix: if all of the samples in a single experimental factor 
+Data imputation is performed to the intensity matrix when it is loaded: if all of the samples in a single experimental factor 
 have intensities of zero these are replaced by the minimum intensity value (which can be set by the user); and if 
 only some of the sample values in a factor are zero then these are replaced by the mean value of the non-zero samples 
 in that factor. The data is subsequently transformed to log-2 base and standardised using the preprocessing module in 
@@ -117,15 +117,16 @@ row_id,entity_id
 
 ### 5. Other Pathway Analysis Methods
 
-ORA and GSEA are used as comparisons and are both included in PALS, and can be used for comparison. For more details, please refer to our paper.
+ORA and GSEA are used as comparisons and are both included in PALS, and can be used for benchmarking and analysis. For more details, please refer to our paper.
 
 ### 6. Web Interface
 
-PALS Viewer is a Web interface on top of the [Streamlit](https://www.streamlit.io/) framework to run PALS, analyse 
-pathway ranking results as well as inspect significantly changing pathways. It can be run using the following command:
+PALS Viewer is a Web interface on top of the [Streamlit](https://www.streamlit.io/) framework. It can be used to run PALS, analyse 
+pathway ranking results as well as inspect significantly changing pathways. To run it locally use following command:
 ```
 $ streamlit run pals/run_gui.py
 ```
+Alternatively an instance of PALS Viewer can also be found on our server.
 
 ### 7. Usage in other applications
 
@@ -133,11 +134,13 @@ PALS can be imported as a Python library and incorporated into your own Python a
 following code snippet:
 ```
 from pals.ORA import ORA
-from pals.PALS import PALS
+from pals.PLAGE import PLAGE
+from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
 
 # TODO: correctly initialise the following data structures for your data.
+# Refer to the paragraphs below.
 int_df = pd.DataFrame()
 annotation_df = pd.DataFrame()
 experimental_design = {}
@@ -160,8 +163,9 @@ ds = DataSource(int_df, annotation_df, experimental_design, database_name,
                 reactome_metabolic_pathway_only=reactome_metabolic_pathway_only,
                 reactome_query=reactome_query, min_replace=min_replace)
 
-method = PALS(ds)
+method = PLAGE(ds)
 # method = ORA(ds) 
+# method = GSEA(ds)
 
 df = method.get_pathway_df()    
 ```
