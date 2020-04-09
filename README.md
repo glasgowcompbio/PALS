@@ -180,7 +180,7 @@ Example `int_df` dataframe:
 ![int_df](images/int_df.png?raw=true "int_df")
 
 Example `annot_df` dataframe:
-![annot_df](images/annot_df.png?raw=true "annot_df"){:width="400px"}
+![annot_df](images/annot_df.png?raw=true "annot_df"){:width="300px"}
 
 The experimental design data in `experimental_design` contains information on **groups**, which relates all samples in 
 a particular experimental factor together as well as **comparisons**, which describes the desired comparisons for the 
