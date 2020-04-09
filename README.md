@@ -177,10 +177,10 @@ line of grouping information omitted). Similarly `annot_df` is the annotation da
 also described above. 
 
 Example `int_df` dataframe:
-![PALS](images/int_df.png?raw=true "int_df")
+![int_df](images/int_df.png?raw=true "int_df")
 
 Example `annot_df` dataframe:
-![PALS](images/annot_df.png?raw=true "int_df")
+![annot_df](images/annot_df.png?raw=true "annot_df"){:width="400px"}
 
 The experimental design data in `experimental_design` contains information on **groups**, which relates all samples in 
 a particular experimental factor together as well as **comparisons**, which describes the desired comparisons for the 
