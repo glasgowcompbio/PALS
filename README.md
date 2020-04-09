@@ -5,7 +5,7 @@
 ### 1. Introduction
 
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
-Activity Level Scoring)**, a complete tool that performs database queries of pathways, decomposes activity levels in pathways via the PLAGE method, as well as presents the results in a user-friendly manner. The results are found to be more robust to noise and missing peaks compared to the alternatives (ORA, GSEA). This is particularly important for metabolomics peak data, where noise and missing peaks are prevalent.
+Activity Level Scoring)**, a complete tool that performs database queries of pathways, decomposes activity levels in pathways via [the PLAGE method](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225), as well as presents the results in a user-friendly manner. The results are found to be more robust to noise and missing peaks compared to the alternatives (ORA, GSEA). This is particularly important for metabolomics peak data, where noise and missing peaks are prevalent.
 
 **To access our interactive Web application *PALS Viewer*, please visit [http://134.122.111.79:8501/](http://134.122.111.79:8501/) (temporary server).**
 
@@ -175,6 +175,12 @@ data can be passed directly as a dictionary structure in the programmatic use. I
 intensity data frame containing peak intensity information described in the File Format section above (with the second 
 line of grouping information omitted). Similarly `annot_df` is the annotation data frame containing peak annotations 
 also described above. 
+
+Example `int_df` dataframe:
+![PALS](images/int_df.png?raw=true "int_df")
+
+Example `annot_df` dataframe:
+![PALS](images/annot_df.png?raw=true "int_df")
 
 The experimental design data in `experimental_design` contains information on **groups**, which relates all samples in 
 a particular experimental factor together as well as **comparisons**, which describes the desired comparisons for the 
