@@ -7,7 +7,7 @@
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
 Activity Level Scoring)**, a complete tool that performs database queries of pathways, decomposes activity levels in pathways via [the PLAGE method](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225), as well as presents the results in a user-friendly manner. The results are found to be more robust to noise and missing peaks compared to the alternatives (ORA, GSEA). This is particularly important for metabolomics peak data, where noise and missing peaks are prevalent.
 
-**To access our interactive Web application *PALS Viewer*, please visit [http://134.122.111.79:8501/](http://134.122.111.79:8501/) (temporary server).**
+**To access our interactive Web application *PALS Viewer*, please visit [https://pals.glasgowcompbio.org/](https://pals.glasgowcompbio.org/).**
 
 ![PALS](images/overall_schematic.png?raw=true "PALS")
 
