@@ -48,8 +48,7 @@ class PLAGE(object):
         :param standardize: whether to standardize data
         :return: a dataframe containing pathway analysis results from PALS
         """
-        measurement_df = self.data_source.get_measurements()
-        activity_df = self.get_plage_activity_df(measurement_df, standardize)
+        activity_df = self.get_plage_activity_df(standardize)
         if resample:
             with warnings.catch_warnings():
                 # FIXME: not sure if this is the best thing to do
@@ -60,7 +59,7 @@ class PLAGE(object):
         pathway_df = self.calculate_hg_values(plage_df)
         return pathway_df
 
-    def get_plage_activity_df(self, measurement_df, standardize=True):
+    def get_plage_activity_df(self, standardize=True):
         """
         Performs data normalisation and computes the PLAGE activity dataframe
         :return: PLAGE activity dataframe
@@ -76,6 +75,8 @@ class PLAGE(object):
                     # "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
                     # The standard deviation of the data is probably very close to 0."
                     raise (e)
+        else:
+            measurement_df = self.data_source.get_measurements()
 
         # Standardizing, testing data
         mean = np.round(measurement_df.values.mean(axis=1))
