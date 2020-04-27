@@ -302,12 +302,24 @@ class DataSource(object):
 
         # standardize the data across the samples (zero mean and unit variance))
         logger.debug("Scaling the data across the sample: zero mean and unit variance")
-        scaled_data = np.log(np.array(measurement_df))
-        scaled_data = preprocessing.scale(scaled_data, axis=1)
 
-        # Put the scaled data back into df for further use
-        sample_names = measurement_df.columns
-        measurement_df[sample_names] = scaled_data
+        # for some reason, calling preprocessing.scale() below sometimes throws the following warning:
+        # > "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
+        # > The standard deviation of the data is probably very close to 0."
+        #
+        # This seems to be fixed if we use the StandardScaler instead, which does the same thing
+        # see https://stackoverflow.com/questions/51741605/standardize-dataset-containing-too-large-values
+
+        # scaled_data = np.log(np.array(measurement_df))
+        # scaled_data = preprocessing.scale(scaled_data, axis=1)
+        # sample_names = measurement_df.columns
+        # measurement_df[sample_names] = scaled_data
+
+        scaler = preprocessing.StandardScaler()
+        scaled_df = np.log(measurement_df.transpose()) # get this into the right shape for StandardScaler
+        scaled_df = scaler.fit_transform(scaled_df)
+        measurement_df = pd.DataFrame(scaled_df.transpose(), columns=measurement_df.columns, index=measurement_df.index)
+
         return measurement_df
 
     def change_zero_peak_ints(self):
