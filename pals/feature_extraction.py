@@ -12,6 +12,17 @@ from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_d
     get_protein_mapping_dict, get_gene_entity_dict, get_gene_mapping_dict
 
 
+class Database(object):
+    def __init__(self, database_name, pathway_dict, entity_dict, mapping_dict):
+        self.database_name = database_name
+        self.pathway_dict = pathway_dict
+        self.entity_dict = entity_dict
+        self.mapping_dict = mapping_dict
+
+    def __repr__(self):
+        return self.database_name
+
+
 class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
@@ -47,9 +58,9 @@ class DataSource(object):
             logger.debug('Using user-provided database')
             assert database_name is None
             self.database = database
-        self.pathway_dict = self.database['pathway_dict']  # mapid -> pathway name
-        self.entity_dict = self.database['entity_dict']  # compound id -> formula
-        self.mapping_dict = self.database['mapping_dict']  # compound id -> [ mapids ]
+        self.pathway_dict = self.database.pathway_dict  # mapid -> pathway name
+        self.entity_dict = self.database.entity_dict  # compound id -> formula
+        self.mapping_dict = self.database.mapping_dict  # compound id -> [ mapids ]
 
         # map between pathway id to compound ids and formulas
         logger.debug('Mapping pathway to unique ids')
@@ -151,7 +162,9 @@ class DataSource(object):
                 'entity_dict': entity_dict,
                 'mapping_dict': mapping_dict
             }
-        return data
+
+        database = Database(database_name, data['pathway_dict'], data['entity_dict'], data['mapping_dict'])
+        return database
 
     def get_measurements(self):
         return self.measurement_df.copy()
