@@ -8,10 +8,10 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
-from .common import SIGNIFICANT_THRESHOLD, is_comparison_used
+from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, Method
 
 
-class ORA(object):
+class ORA(Method):
 
     def __init__(self, data_source, case=None, control=None):
         """

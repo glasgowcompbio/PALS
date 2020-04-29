@@ -194,3 +194,8 @@ def _parse_groups(lines):
             continue
         grouping[group].append(sample)
     return dict(grouping)
+
+
+class Method(object):
+    def get_pathway_df(self):
+        raise NotImplementedError()

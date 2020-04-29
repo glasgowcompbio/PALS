@@ -5,7 +5,7 @@ import pandas as pd
 from gseapy.gsea import GSEA
 from loguru import logger
 
-from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES
+from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, Method
 
 
 class MSEA(GSEA):
@@ -25,7 +25,7 @@ class MSEA(GSEA):
             pass
 
 
-class GSEA(object):
+class GSEA(Method):
 
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, method=GSEA_RANKING_SNR, case=None, control=None):
         """

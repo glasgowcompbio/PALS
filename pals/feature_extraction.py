@@ -1,4 +1,3 @@
-import os
 from collections import defaultdict
 
 import numpy as np
@@ -6,21 +5,9 @@ import pandas as pd
 from loguru import logger
 from sklearn import preprocessing
 
-from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
+from .loader import PiMP_KEGG_Loader, CompoundOnlineLoader, CompoundOfflineLoader, UniProtLoader, EnsemblLoader
+from .common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
     DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE
-from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict, get_protein_entity_dict, \
-    get_protein_mapping_dict, get_gene_entity_dict, get_gene_mapping_dict
-
-
-class Database(object):
-    def __init__(self, database_name, pathway_dict, entity_dict, mapping_dict):
-        self.database_name = database_name
-        self.pathway_dict = pathway_dict
-        self.entity_dict = entity_dict
-        self.mapping_dict = mapping_dict
-
-    def __repr__(self):
-        return self.database_name
 
 
 class DataSource(object):
@@ -110,60 +97,30 @@ class DataSource(object):
         self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
 
     def get_database(self, database_name, mp_only, reactome_query, reactome_species):
-        # load compound and pathway database information from file
-        if database_name == DATABASE_PIMP_KEGG:  # PiMP exported pathways for KEGG
-            json_file = os.path.abspath(os.path.join(DATA_DIR, '%s.json.zip' % DATABASE_PIMP_KEGG))
-            logger.debug('Loading %s' % json_file)
-            data = load_json(json_file, compressed=True)
+        loader = None
 
-        elif database_name == DATABASE_REACTOME_KEGG or database_name == DATABASE_REACTOME_CHEBI:  # must be using reactome
+        # load PiMP exported data for KEGG
+        if database_name == DATABASE_PIMP_KEGG:
+            loader = PiMP_KEGG_Loader(database_name)
+
+        # load compound data
+        elif database_name == DATABASE_REACTOME_KEGG or database_name == DATABASE_REACTOME_CHEBI:
             if reactome_query:  # fetch reactome data from neo4j
-                logger.debug('Retrieving data for %s from Reactome %s metabolic_pathway_only=%s' %
-                             (reactome_species, database_name, mp_only))
-                pathway_dict = get_pathway_dict(reactome_species,
-                                                metabolic_pathway_only=mp_only)
-                mapping_dict = get_compound_mapping_dict(reactome_species, database_name,
-                                                         metabolic_pathway_only=mp_only)
-                entity_dict = load_entity_dict(database_name)
-                data = {
-                    'pathway_dict': pathway_dict,
-                    'entity_dict': entity_dict,
-                    'mapping_dict': mapping_dict
-                }
+                loader = CompoundOnlineLoader(database_name, reactome_species, mp_only)
             else:
                 # we didn't dump the data for all pathways. Only for the metabolic pathways only this can be used.
-                if not mp_only:
-                    raise ValueError(
-                        'Pathway information is not available. Please use live reactome query with --connect_to_reactome_server.')
-                metabolic_pathway_dir = 'metabolic_pathways' if mp_only else 'all_pathways'
-                json_file = os.path.join(DATA_DIR, 'reactome', metabolic_pathway_dir, database_name,
-                                         '%s.json.zip' % reactome_species)
-                logger.debug('Loading %s' % json_file)
-                data = load_json(json_file, compressed=True)
+                loader = CompoundOfflineLoader(database_name, reactome_species, mp_only)
 
+        # load UniProt data
         elif database_name == DATABASE_REACTOME_UNIPROT:
-            pathway_dict = get_pathway_dict(reactome_species, metabolic_pathway_only=mp_only)
-            entity_dict = get_protein_entity_dict(reactome_species, database_name)
-            mapping_dict = get_protein_mapping_dict(reactome_species, database_name,
-                                                    metabolic_pathway_only=mp_only)
-            data = {
-                'pathway_dict': pathway_dict,
-                'entity_dict': entity_dict,
-                'mapping_dict': mapping_dict
-            }
+            loader = UniProtLoader(database_name, reactome_species, mp_only)
 
+        # load Ensembl data
         elif database_name == DATABASE_REACTOME_ENSEMBL:
-            pathway_dict = get_pathway_dict(reactome_species, metabolic_pathway_only=mp_only)
-            entity_dict = get_gene_entity_dict(reactome_species, database_name)
-            mapping_dict = get_gene_mapping_dict(reactome_species, database_name,
-                                                 metabolic_pathway_only=mp_only)
-            data = {
-                'pathway_dict': pathway_dict,
-                'entity_dict': entity_dict,
-                'mapping_dict': mapping_dict
-            }
+            loader = EnsemblLoader(database_name, reactome_species, mp_only)
 
-        database = Database(database_name, data['pathway_dict'], data['entity_dict'], data['mapping_dict'])
+        assert loader is not None
+        database = loader.load_data()
         return database
 
     def get_measurements(self):
@@ -206,7 +163,6 @@ class DataSource(object):
                 counts.append(0)
         return counts
 
-
     def get_pathway_unique_formula_dict(self, pathway_ids):
         """
         :param pathway_ids: The Ids of the pathways that the formuals are required from
@@ -215,9 +171,8 @@ class DataSource(object):
         pwy_formula_dict = {}
 
         for pathway_id in pathway_ids:
-
             ds_formulas = self.pathway_to_unique_ids_dict[pathway_id].intersection(self.dataset_unique_ids)
-            pwy_formula_dict[pathway_id]=ds_formulas
+            pwy_formula_dict[pathway_id] = ds_formulas
 
         return pwy_formula_dict
 
@@ -329,7 +284,7 @@ class DataSource(object):
         # measurement_df[sample_names] = scaled_data
 
         scaler = preprocessing.StandardScaler()
-        scaled_df = np.log(measurement_df.transpose()) # get this into the right shape for StandardScaler
+        scaled_df = np.log(measurement_df.transpose())  # get this into the right shape for StandardScaler
         scaled_df = scaler.fit_transform(scaled_df)
         measurement_df = pd.DataFrame(scaled_df.transpose(), columns=measurement_df.columns, index=measurement_df.index)
 
