@@ -17,6 +17,7 @@ requests = "*"
 neo4j-driver = "*"
 gseapy = "==0.9.16"
 streamlit = "*"
+tqdm = "*"
 
 [dev-packages]
 bioservices = "*"
