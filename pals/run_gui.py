@@ -15,6 +15,7 @@ from pals.PLAGE import PLAGE
 from pals.GSEA import GSEA
 from pals.common import *
 from pals.feature_extraction import DataSource
+from pals.confirm_button_hack import cache_on_button_press
 
 
 # https://discuss.streamlit.io/t/custom-render-widths/81/8
@@ -49,108 +50,138 @@ def main():
     intensity_csv = st.sidebar.file_uploader("Choose an intensity CSV file", type=['txt', 'csv'])
     annotation_csv = st.sidebar.file_uploader("Choose an annotation CSV file", type=['txt', 'csv'])
     if intensity_csv is not None and annotation_csv is not None:  # data is loaded
-        st.sidebar.subheader('Comparisons')
-        int_df, annotation_df, groups = load_data(intensity_csv, annotation_csv, gui=True)
-        choices = sorted(list(groups.keys()))
-        control = st.sidebar.selectbox(
-            'Control',
-            choices,
-            index=0
+        params = show_pathway_widgets(intensity_csv, annotation_csv)
+        significant_column = '%s/%s p-value' % (params['case'], params['control'])
+
+        # run a pathway analysis method, e.g. PLAGE
+        df, token = run_pathway_analysis(params)
+
+        # display pathway analysis results when available
+        if df is not None:
+            df = process_results(df, significant_column)
+            show_results(df, params['use_reactome'], token)
+
+
+def show_pathway_widgets(intensity_csv, annotation_csv):
+    st.sidebar.subheader('Comparisons')
+    int_df, annotation_df, groups = load_data(intensity_csv, annotation_csv, gui=True)
+    choices = sorted(list(groups.keys()))
+    control = st.sidebar.selectbox(
+        'Control',
+        choices,
+        index=0
+    )
+    case = st.sidebar.selectbox(
+        'Case',
+        choices,
+        index=1
+    )
+    if case == control:
+        st.error("Control ('%s') cannot be the same as case ('%s')." % (control, case))
+        return
+
+    experimental_design = {
+        'groups': groups,
+        'comparisons': [
+            {
+                'case': case,
+                'control': control,
+                'name': '%s/%s' % (case, control)
+            }
+        ]
+    }
+
+    st.sidebar.subheader('Method')
+    selected_method = st.sidebar.selectbox(
+        'Pathway Analysis Method',
+        # (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA), # FIXME: add GSEA
+        (PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA),
+        index=0
+    )
+    database_name = st.sidebar.selectbox(
+        ('Database'),
+        (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_PIMP_KEGG, DATABASE_REACTOME_UNIPROT,
+         DATABASE_REACTOME_ENSEMBL),
+    )
+    min_replace = st.sidebar.number_input('Minimum intensity for data imputation', value=MIN_REPLACE)
+
+    use_reactome = False
+    if database_name in (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_REACTOME_UNIPROT,
+                         DATABASE_REACTOME_ENSEMBL):
+        use_reactome = True
+
+    reactome_species = None
+    reactome_metabolic_pathway_only = False
+    reactome_query = False
+    if use_reactome:
+        st.sidebar.subheader('Reactome')
+        species_list = (
+            REACTOME_SPECIES_ARABIDOPSIS_THALIANA,
+            REACTOME_SPECIES_BOS_TAURUS,
+            REACTOME_SPECIES_CAENORHABDITIS_ELEGANS,
+            REACTOME_SPECIES_CANIS_LUPUS_FAMILIARIS,
+            REACTOME_SPECIES_DANIO_RERIO,
+            REACTOME_SPECIES_DICTYOSTELIUM_DISCOIDEUM,
+            REACTOME_SPECIES_DROSOPHILA_MELANOGASTER,
+            REACTOME_SPECIES_GALLUS_GALLUS,
+            REACTOME_SPECIES_HOMO_SAPIENS,
+            REACTOME_SPECIES_MUS_MUSCULUS,
+            REACTOME_SPECIES_ORYZA_SATIVA,
+            REACTOME_SPECIES_RATTUS_NORVEGICUS,
+            REACTOME_SPECIES_SACCHAROMYCES_CEREVISIAE,
+            REACTOME_SPECIES_SUS_SCROFA
         )
-        case = st.sidebar.selectbox(
-            'Case',
-            choices,
-            index=1
+        human_idx = species_list.index(REACTOME_SPECIES_HOMO_SAPIENS)
+        reactome_species = st.sidebar.selectbox(
+            'Species',
+            species_list,
+            index=human_idx
         )
-        if case == control:
-            st.error("Control ('%s') cannot be the same as case ('%s')." % (control, case))
-            return
+        reactome_metabolic_pathway_only = st.sidebar.checkbox('Limit to metabolic pathways only.', value=True)
+        reactome_query = st.sidebar.checkbox('Connect to a Reactome Neo4j database (Online Mode).', value=False)
 
-        experimental_design = {
-            'groups': groups,
-            'comparisons': [
-                {
-                    'case': case,
-                    'control': control,
-                    'name': '%s/%s' % (case, control)
-                }
-            ]
-        }
+    parameters = {
+        'int_df': int_df,
+        'annotation_df': annotation_df,
+        'case': case,
+        'control': control,
+        'experimental_design': experimental_design,
+        'selected_method': selected_method,
+        'database_name': database_name,
+        'min_replace': min_replace,
+        'use_reactome': use_reactome,
+        'reactome_species': reactome_species,
+        'reactome_metabolic_pathway_only': reactome_metabolic_pathway_only,
+        'reactome_query': reactome_query
+    }
+    return parameters
 
-        st.sidebar.subheader('Method')
-        selected_method = st.sidebar.selectbox(
-            'Pathway Analysis Method',
-            # (PATHWAY_ANALYSIS_PALS, PATHWAY_ANALYSIS_ORA, PATHWAY_ANALYSIS_GSEA), # FIXME: add GSEA
-            (PATHWAY_ANALYSIS_PLAGE, PATHWAY_ANALYSIS_ORA),
-            index=0
-        )
-        database_name = st.sidebar.selectbox(
-            ('Database'),
-            (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_PIMP_KEGG, DATABASE_REACTOME_UNIPROT,
-             DATABASE_REACTOME_ENSEMBL),
-        )
-        min_replace = st.sidebar.number_input('Minimum intensity for data imputation', value=MIN_REPLACE)
 
-        use_reactome = False
-        if database_name in (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_REACTOME_UNIPROT,
-                             DATABASE_REACTOME_ENSEMBL):
-            use_reactome = True
+@cache_on_button_press('Run')
+def run_pathway_analysis(params):
+    # construct a data source from all the user parameters
+    ds = get_data_source(params['annotation_df'], params['database_name'], params['experimental_design'],
+                         params['int_df'], params['min_replace'], params['reactome_metabolic_pathway_only'],
+                         params['reactome_query'], params['reactome_species'])
+    if len(ds.dataset_pathways) == 0:
+        st.error('No matching pathways found for this data. Ensure that the database and species are correct.')
+        return
 
-        reactome_species = None
-        reactome_metabolic_pathway_only = False
-        reactome_query = False
-        if use_reactome:
-            st.sidebar.subheader('Reactome')
-            species_list = (
-                REACTOME_SPECIES_ARABIDOPSIS_THALIANA,
-                REACTOME_SPECIES_BOS_TAURUS,
-                REACTOME_SPECIES_CAENORHABDITIS_ELEGANS,
-                REACTOME_SPECIES_CANIS_LUPUS_FAMILIARIS,
-                REACTOME_SPECIES_DANIO_RERIO,
-                REACTOME_SPECIES_DICTYOSTELIUM_DISCOIDEUM,
-                REACTOME_SPECIES_DROSOPHILA_MELANOGASTER,
-                REACTOME_SPECIES_GALLUS_GALLUS,
-                REACTOME_SPECIES_HOMO_SAPIENS,
-                REACTOME_SPECIES_MUS_MUSCULUS,
-                REACTOME_SPECIES_ORYZA_SATIVA,
-                REACTOME_SPECIES_RATTUS_NORVEGICUS,
-                REACTOME_SPECIES_SACCHAROMYCES_CEREVISIAE,
-                REACTOME_SPECIES_SUS_SCROFA
-            )
-            human_idx = species_list.index(REACTOME_SPECIES_HOMO_SAPIENS)
-            reactome_species = st.sidebar.selectbox(
-                'Species',
-                species_list,
-                index=human_idx
-            )
-            reactome_metabolic_pathway_only = st.sidebar.checkbox('Limit to metabolic pathways only.', value=True)
-            reactome_query = st.sidebar.checkbox('Connect to a Reactome Neo4j database (Online Mode).', value=False)
+    # run the appropriate pathway analysis method
+    df = None
+    selected_method = params['selected_method']
+    if selected_method == PATHWAY_ANALYSIS_PLAGE:
+        df = pathway_analysis_pals(ds)
+    elif selected_method == PATHWAY_ANALYSIS_ORA:
+        df = pathway_analysis_ora(ds)
+    elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
+        df = pathway_analysis_gsea(ds)
 
-        significant_column = '%s/%s p-value' % (case, control)
-        ds = get_data_source(annotation_df, database_name, experimental_design, int_df, min_replace,
-                             reactome_metabolic_pathway_only, reactome_query, reactome_species)
+    token = None
+    if params['use_reactome']:
+        token = send_expression_data(ds, params['case'], params['control'], params['reactome_species'])
 
-        if len(ds.dataset_pathways) == 0:
-            st.error('No matching pathways found for this data. Ensure that the database and species are correct.')
-            return
-
-        # st.write('Calling pathway_analysis(', ds, ',', selected_method)
-        df = None
-        if selected_method == PATHWAY_ANALYSIS_PLAGE:
-            df = pathway_analysis_pals(ds)
-        elif selected_method == PATHWAY_ANALYSIS_ORA:
-            df = pathway_analysis_ora(ds)
-        elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
-            df = pathway_analysis_gsea(ds)
-        assert df is not None
-
-        df = process_results(df, significant_column)
-        # st.success('Pathway analysis successful!')
-
-        token = None
-        if use_reactome:
-            token = send_expression_data(ds, case, control, reactome_species)
-        show_results(df, use_reactome, token)
+    return df, token
 
 
 @st.cache
