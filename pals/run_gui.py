@@ -256,6 +256,7 @@ def show_results(df, use_reactome, token):
     pval_threshold = st.slider('Filter pathways with p-values less than', min_value=0.0, max_value=1.0, value=0.05,
                                step=0.05)
     df = df[df['p-value'] <= pval_threshold]
+    df['Formula Coverage (%)'] = pd.to_numeric(df['Formula Coverage (%)'])
 
     # filter by formula hits
     min_hits = 1
