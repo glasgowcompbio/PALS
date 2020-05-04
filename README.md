@@ -1,6 +1,6 @@
 # PALS
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/XP4wsoInh4E" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<img src="images/logo.png?raw=true" width="300">
 
 ### 1. Introduction
 
