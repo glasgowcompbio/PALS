@@ -1,5 +1,3 @@
-<img src="images/logo_transparent.png?raw=true" width="300">
-
 ### 1. Introduction
 
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
