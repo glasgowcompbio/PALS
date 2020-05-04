@@ -1,5 +1,3 @@
-# PALS
-
 <img src="images/logo.png?raw=true" width="300">
 
 ### 1. Introduction
