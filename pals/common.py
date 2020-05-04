@@ -1,3 +1,4 @@
+import base64
 import gzip
 import json
 import logging
@@ -49,6 +50,8 @@ GSEA_RANKING_SNR = 'signal_to_noise'
 GSEA_RANKING_LOGFC = 'log2_ratio_of_classes'
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
+GUI_MOLECULAR_FAMILY_ANALYSIS = 'Molecular Family Analysis'
 
 
 def load_json(json_file, compressed=False):
@@ -140,7 +143,7 @@ def load_data(intensity_csv, annotation_csv, gui=False):
     # skip the second row containing group information
     # set the first column (peak ids) in csv to be the index
 
-    if gui: # load data for GUI (Streamlit)
+    if gui:  # load data for GUI (Streamlit)
         lines = [line for line in intensity_csv]
         filtered_lines = [line for idx, line in enumerate(lines) if idx != 1]
         intensities = StringIO('\n'.join(filtered_lines))
@@ -199,3 +202,16 @@ def _parse_groups(lines):
 class Method(object):
     def get_pathway_df(self):
         raise NotImplementedError()
+
+
+# https://discuss.streamlit.io/t/how-to-set-file-download-function/2141
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(
+        csv.encode()
+    ).decode()  # some strings <-> bytes conversions necessary here
+    return f'<a href="data:file/csv;base64,{b64}" download="results.csv">Download csv file</a>'

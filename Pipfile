@@ -18,6 +18,7 @@ neo4j-driver = "*"
 gseapy = "==0.9.16"
 streamlit = "*"
 tqdm = "*"
+pillow = "*"
 
 [dev-packages]
 bioservices = "*"
