@@ -1,5 +1,4 @@
 theme: jekyll-theme-minimal
-title: PALS
 description: A Python tool to rank significantly-changing metabolite sets
 logo: https://raw.githubusercontent.com/glasgowcompbio/PALS/master/images/logo_transparent.png
 show_downloads: "true"
