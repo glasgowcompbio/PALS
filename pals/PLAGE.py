@@ -41,7 +41,7 @@ class PLAGE(Method):
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, resample=True, standardize=True):
+    def get_pathway_df(self, resample=True, standardize=True, streamlit_pbar=None):
         """
         Main method to perform pathway analysis
         :param resample: whether to perform resampling
@@ -53,7 +53,7 @@ class PLAGE(Method):
             with warnings.catch_warnings():
                 # FIXME: not sure if this is the best thing to do
                 warnings.filterwarnings('ignore')
-                plage_df = self.set_up_resample_plage_p_df(activity_df)
+                plage_df = self.set_up_resample_plage_p_df(activity_df, streamlit_pbar=streamlit_pbar)
         else:
             plage_df = self.set_up_plage_p_df(activity_df)
         pathway_df = self.calculate_hg_values(plage_df)
@@ -87,7 +87,7 @@ class PLAGE(Method):
         activity_df = self._calculate_pathway_activity_df(measurement_df)
         return activity_df
 
-    def set_up_resample_plage_p_df(self, activity_df):
+    def set_up_resample_plage_p_df(self, activity_df, streamlit_pbar=None):
         """
         Obtains a PLAGE dataframe with resampling
         :param activity_df: a PLAGE activity dataframe
@@ -109,6 +109,9 @@ class PLAGE(Method):
             for iteration in range(self.num_resamples):
                 if iteration % 100 == 0:
                     logger.debug('Resampling %d/%d' % (iteration, self.num_resamples))
+                if streamlit_pbar is not None:
+                    progress = int((iteration + 1) / self.num_resamples * 100)
+                    streamlit_pbar.progress(progress)
                 condition_1, condition_2 = self._permute_two_lists(comparison_samples[0], comparison_samples[1])
                 permutation_tvalues = self._calculate_t_values(activity_df, condition_1, condition_2)
                 null_max_tvalues.append(max(permutation_tvalues))

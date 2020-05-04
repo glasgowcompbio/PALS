@@ -51,7 +51,7 @@ GSEA_RANKING_LOGFC = 'log2_ratio_of_classes'
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
-GUI_MOLECULAR_FAMILY_ANALYSIS = 'Molecular Family Analysis'
+GUI_MOLECULAR_FAMILY_ANALYSIS = 'Molecular Family (GNPS) Analysis'
 
 
 def load_json(json_file, compressed=False):

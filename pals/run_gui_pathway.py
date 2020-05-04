@@ -108,7 +108,7 @@ def show_pathway_widgets(intensity_csv, annotation_csv):
     return parameters
 
 
-@cache_on_button_press('Run')
+@cache_on_button_press('Run Analysis')
 def run_pathway_analysis(params):
     # construct a data source from all the user parameters
     ds = get_data_source(params['annotation_df'], params['database_name'], params['experimental_design'],
@@ -122,7 +122,7 @@ def run_pathway_analysis(params):
     df = None
     selected_method = params['selected_method']
     if selected_method == PATHWAY_ANALYSIS_PLAGE:
-        df = pathway_analysis_pals(ds)
+        df = pathway_analysis_plage(ds)
     elif selected_method == PATHWAY_ANALYSIS_ORA:
         df = pathway_analysis_ora(ds)
     elif selected_method == PATHWAY_ANALYSIS_GSEA:  # FIXME: GSEA doesn't work yet
@@ -136,24 +136,22 @@ def run_pathway_analysis(params):
 
 
 @st.cache(suppress_st_warning=True)
-def pathway_analysis_pals(ds):
-    # st.write('Cache miss: pathway_analysis_pals(', ds, ') ran')
+def pathway_analysis_plage(ds):
+    my_bar = st.progress(0)
     method = PLAGE(ds)
-    df = method.get_pathway_df()
+    df = method.get_pathway_df(streamlit_pbar=my_bar)
     return df
 
 
-@st.cache(suppress_st_warning=True)
+@st.cache
 def pathway_analysis_ora(ds):
-    # st.write('Cache miss: pathway_analysis_ora(', ds, ') ran')
     method = ORA(ds)
     df = method.get_pathway_df()
     return df
 
 
-@st.cache(suppress_st_warning=True)
+@st.cache
 def pathway_analysis_gsea(ds):
-    # st.write('Cache miss: pathway_analysis_gsea(', ds, ') ran')
     method = GSEA(ds)
     df = method.get_pathway_df()
     return df
