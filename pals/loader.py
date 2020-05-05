@@ -198,10 +198,19 @@ class GNPSLoader(Loader):
         # Create entity dictionary. In this case, an 'entity' is a MS1 peak (GNPS consensus cluster)
         # turn df to dictionary, with cluster index as the key
         clustering_df.index = clustering_df.index.astype('str')
-        entity_dict = clustering_df.to_dict(orient='index')
-        for peak_id in entity_dict:
+        temp = clustering_df.to_dict(orient='index')
+        entity_dict = {}
+        for peak_id in temp:
+            entity_dict[peak_id] = {}
             entity_dict[peak_id]['unique_id'] = peak_id
-            entity_dict[peak_id]['display_name'] = entity_dict[peak_id]['parent mass']
+            entity_dict[peak_id]['display_name'] = temp[peak_id]['parent mass']
+            entity_dict[peak_id]['LibraryID'] = temp[peak_id]['LibraryID']
+            entity_dict[peak_id]['GNPSLinkout_Network'] = temp[peak_id]['GNPSLinkout_Network']
+            entity_dict[peak_id]['number of spectra'] = temp[peak_id]['number of spectra']
+            entity_dict[peak_id]['RTConsensus'] = temp[peak_id]['RTConsensus']
+            entity_dict[peak_id]['precursor mass'] = temp[peak_id]['precursor mass']
+            entity_dict[peak_id]['SumPeakIntensity'] = temp[peak_id]['SumPeakIntensity']
+            entity_dict[peak_id]['componentindex'] = temp[peak_id]['componentindex']
 
         # Create mapping dictionary that maps entities to pathways
         mapping_dict = {}

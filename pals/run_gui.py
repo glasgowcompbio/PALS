@@ -2,7 +2,6 @@
 import sys
 
 import streamlit as st
-import pandas as pd
 
 sys.path.append('.')
 
@@ -13,6 +12,7 @@ from pals.common import *
 
 # pandas display options
 pd.set_option('display.max_colwidth', None)
+
 
 # https://discuss.streamlit.io/t/custom-render-widths/81/8
 def max_width():
@@ -66,9 +66,9 @@ def main():
             significant_column = '%s/%s p-value' % (params['case'], params['control'])
 
             # run PLAGE on the GNPS data
-            df, ds = run_gnps_analysis(params)
-            df = process_gnps_results(df, significant_column)
-            show_gnps_results(df, ds)
+            results = run_gnps_analysis(params)
+            df = process_gnps_results(results['df'], significant_column)
+            show_gnps_results(df, results)
         else:
             write_main_text(analysis_type)
 
