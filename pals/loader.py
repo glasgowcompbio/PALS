@@ -124,14 +124,13 @@ class EnsemblLoader(Loader):
 
 
 class GNPSLoader(Loader):
-    def __init__(self, database_name, gnps_url, metadata_df, comparisons, streamlit_pbar=False):
+    def __init__(self, database_name, gnps_url, metadata_df, comparisons):
         self.database_name = database_name
         self.gnps_url = gnps_url
         self.metadata_df = metadata_df
         self.comparisons = comparisons
         self.int_df = None
         self.annotation_df = None
-        self.streamlit_pbar = streamlit_pbar
 
     def load_data(self):
         # load clustering and quantification info from the zip file
@@ -246,14 +245,6 @@ class GNPSLoader(Loader):
             for data in r.iter_content(block_size):
                 t.update(len(data))
                 f.write(data)
-
-                # update streamlit progress bar, up to a maximum value of 100 MB
-                if self.streamlit_pbar is not None:
-                    data_size = int(f.getbuffer().nbytes / (block_size * block_size))
-                    if data_size > 100:
-                        data_size = 100
-                    self.streamlit_pbar.progress(data_size)
-
             clustering_df, quantification_df = self._parse_gnps(f)
         t.close()
 

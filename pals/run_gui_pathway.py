@@ -5,13 +5,12 @@ import requests
 import streamlit as st
 from bioservices.kegg import KEGG
 
-from pals.common import *
-from pals.confirm_button_hack import cache_on_button_press
-from pals.feature_extraction import DataSource
-
 from pals.GSEA import GSEA
 from pals.ORA import ORA
 from pals.PLAGE import PLAGE
+from pals.common import *
+from pals.feature_extraction import DataSource
+
 
 def show_pathway_widgets(intensity_csv, annotation_csv):
     st.sidebar.subheader('Comparisons')
@@ -108,7 +107,7 @@ def show_pathway_widgets(intensity_csv, annotation_csv):
     return parameters
 
 
-@cache_on_button_press('Run Analysis')
+@st.cache
 def run_pathway_analysis(params):
     # construct a data source from all the user parameters
     ds = get_data_source(params['annotation_df'], params['database_name'], params['experimental_design'],
@@ -140,6 +139,7 @@ def pathway_analysis_plage(ds):
     my_bar = st.progress(0)
     method = PLAGE(ds)
     df = method.get_pathway_df(streamlit_pbar=my_bar)
+    my_bar.empty()
     return df
 
 
@@ -168,7 +168,7 @@ def get_data_source(annotation_df, database_name, experimental_design, int_df, m
 
 
 @st.cache
-def process_results(df, significant_column):
+def process_pathway_results(df, significant_column):
     # filter results to show only the columns we want
     try:
         df = df.drop(columns=['sf', 'exp_F', 'Ex_Cov'])
@@ -177,7 +177,8 @@ def process_results(df, significant_column):
     df = df[df.columns.drop(list(df.filter(regex='comb_p')))]
 
     # sort column
-    df = df.sort_values(significant_column)
+    count_col = 'unq_pw_F'
+    df = df.sort_values([significant_column, count_col], ascending=[True, False])
 
     # reorder and rename columns
     df = df[['pw_name', significant_column, 'tot_ds_F', 'unq_pw_F', 'F_coverage']]
@@ -195,7 +196,7 @@ def process_results(df, significant_column):
     return df
 
 
-def show_results(df, use_reactome, token):
+def show_pathway_results(df, use_reactome, token):
     # write header -- pathway ranking
     st.header('Pathway Ranking')
     st.write(' The following table shows a ranking of pathways based on their activity levels. Entries in the table can'
@@ -210,7 +211,7 @@ def show_results(df, use_reactome, token):
     # filter by formula hits
     min_hits = 1
     max_hits = max(df['Formula Hits'])
-    formula_threshold = st.slider('Filter pathways with formula hits at least', min_value=min_hits, max_value=max_hits,
+    formula_threshold = st.slider('Filter pathways having formula hits at least', min_value=min_hits, max_value=max_hits,
                                   value=2, step=1)
     df = df[df['Formula Hits'] >= formula_threshold]
 
@@ -220,7 +221,8 @@ def show_results(df, use_reactome, token):
     # write header -- pathway info
     st.header('Pathway Browser')
     st.write('To display additional information on significantly changing pathways, please select them in'
-             ' the list below. Entries are listed in ascending order according to their pathway activity p-values.')
+             ' the list below. Entries are listed in ascending order according to their pathway activity p-values and'
+             ' the number of formula hits.')
 
     choices = []
     for idx, row in df.iterrows():
@@ -250,14 +252,7 @@ def show_results(df, use_reactome, token):
                 st.write(header_markdown)
 
                 row = df.loc[stId]
-                p_value = row['p-value']
-                num_hits = row['Formula Hits']
-                subsubheader = '#### p-value: %.4f' % p_value
-                st.write(subsubheader)
-                subsubheader = '#### Formula Hits: %d' % (num_hits)
-                st.write(subsubheader)
-
-                st.write('#### Summary:')
+                st.write(row)
                 for summation in json_response['summation']:
                     summary = summation['text']
                     st.write(summary)
