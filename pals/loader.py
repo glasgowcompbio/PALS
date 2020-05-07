@@ -1,13 +1,16 @@
 import os
+import zipfile
+from collections import defaultdict
 from io import BytesIO
 
 import pandas as pd
 import requests
-import zipfile
 from loguru import logger
 from tqdm import tqdm
 
-from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR
+from .common import DATABASE_PIMP_KEGG, load_json, DATA_DIR, GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW, \
+    GNPS_VIEW_ALL_MOTIFS_VIEW, \
+    DATABASE_GNPS_MS2LDA, DATABASE_GNPS_MOLECULAR_FAMILY
 from .reactome import get_pathway_dict, get_compound_mapping_dict, load_entity_dict, get_protein_entity_dict, \
     get_protein_mapping_dict, get_gene_entity_dict, get_gene_mapping_dict
 
@@ -124,21 +127,26 @@ class EnsemblLoader(Loader):
 
 
 class GNPSLoader(Loader):
-    def __init__(self, database_name, gnps_url, metadata_df, comparisons):
+    def __init__(self, database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=None):
         self.database_name = database_name
         self.gnps_url = gnps_url
         self.metadata_df = metadata_df
         self.comparisons = comparisons
         self.int_df = None
         self.annotation_df = None
+        self.gnps_ms2lda_url = gnps_ms2lda_url
+        if self.database_name == DATABASE_GNPS_MS2LDA:
+            assert self.gnps_ms2lda_url is not None
 
     def load_data(self):
-        # load clustering and quantification info from the zip file
-        clustering_df, quantification_df = self._download_gnps(self.gnps_url)
-        assert clustering_df is not None and quantification_df is not None
-
-        # drop all the singleton components
-        clustering_df = clustering_df[clustering_df['componentindex'] != -1]
+        logger.info('Retrieving clustering and quantification information from GNPS')
+        logger.debug(self.gnps_url)
+        results = self._download_gnps(self.gnps_url, GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW)
+        assert results is not None
+        quantification_df = results['quantification_df']
+        clustering_df = results['clustering_df']
+        filtered_clustering_df = clustering_df[
+            clustering_df['componentindex'] != -1]  # drop all the singleton components
 
         # keep only columns containing 'Peak area', and remove 'Peak area' from column names
         measurement_df = quantification_df.filter(regex='Peak area')
@@ -154,9 +162,9 @@ class GNPSLoader(Loader):
         measurement_df = measurement_df[metadata_df['sample']]
 
         # create annotation dataframe
-        annotation_df = pd.DataFrame(index=clustering_df.index)
+        annotation_df = pd.DataFrame(index=filtered_clustering_df.index)
         annotation_df.index.rename('peak_id', inplace=True)
-        annotation_df['entity_id'] = clustering_df.index
+        annotation_df['entity_id'] = filtered_clustering_df.index
         annotation_df['entity_id'] = annotation_df['entity_id'].astype(str)
         annotation_df.index = annotation_df.index.astype('str')
 
@@ -177,28 +185,98 @@ class GNPSLoader(Loader):
             'experimental_design': experimental_design
         }
 
-        # generate a database for GNPS
-        database = self._to_database(clustering_df, extra_data)
+        # Turn grouping information into PALS database object
+        # If it's a standard FBMN-GNPS result, then use the clustering as the groups
+        # otherwise if it is GNPS-MS2LDA result, then download the MS2LDA results from GNPS and use motifs as groups
+        if self.database_name == DATABASE_GNPS_MOLECULAR_FAMILY:
+            database = self._molfam_to_database(filtered_clustering_df, extra_data)
+
+        elif self.database_name == DATABASE_GNPS_MS2LDA:
+            logger.info('Retrieving motif information from GNPS')
+            logger.debug(self.gnps_ms2lda_url)
+
+            results = self._download_gnps(self.gnps_ms2lda_url, GNPS_VIEW_ALL_MOTIFS_VIEW)
+            motif_df = results['motif_df']
+            database = self._motif_to_database(clustering_df, motif_df, extra_data)
+
         return database
 
-    def _to_database(self, clustering_df, extra_data):
+    def _molfam_to_database(self, clustering_df, extra_data):
         """
-        Creates a user-defined database for GNPS
-        :param clustering_df: a dataframe of clustering information
+        Creates a user-defined database from GNPS Molecular Family clustering
+        :param clustering_df: a dataframe of GNPS clustering information
         :param extra_data: additional information to include in the database
-        :return: a Database object for GNPS
+        :return: a Database object from GNPS Molecular Family clustering
         """
 
-        # First create 'pathway' dictionary. In this case, 'pathway' is a GNPS molecular family / component
+        # Create 'pathway' dictionary. In this case, 'pathway' is a GNPS molecular family
         pathway_dict = {}
         for comp in clustering_df['componentindex'].values:
             key = str(comp)
             pathway_dict[key] = {'display_name': 'Molecular Family #%d' % comp}
 
-        # Create entity dictionary. In this case, an 'entity' is a MS1 peak (GNPS consensus cluster)
-        # turn df to dictionary, with cluster index as the key
+        # Create entity dictionary. An 'entity' is a MS1 peak (GNPS consensus cluster)
+        entity_dict = self._get_entity_dict(clustering_df)
+
+        # Create mapping dictionary that maps entities to pathways
+        mapping_dict = {}
+        for peak_id in entity_dict:
+            component_index = str(entity_dict[peak_id]['componentindex'])
+            mapping_dict[peak_id] = [component_index]
+
+        # put everything together in a Database object
+        database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
+        return database
+
+    def _motif_to_database(self, clustering_df, motif_df, extra_data):
+        """
+        Creates a user-defined database from GNPS-MS2LDA results
+        :param clustering_df: a dataframe of clustering information
+        :param motif_df: a dataframe of LDA analysis from GNPS-MS2LDA
+        :param extra_data: additional information to include in the database
+        :return: a Database object from GNPS-MS2LDA results
+        """
+        # Create 'pathway' dictionary. In this case, 'pathway' is a GNPS-MS2LDA motif
+        pathway_dict = {}
+        for idx, row in motif_df.iterrows():
+            key = row['motif']
+            motifdb_url = row['motifdb_url']
+            motifdb_annotation = row['motifdb_annotation']
+
+            # Try to cast motifdb_annotation to float. If success, then it contains NaN, which we can ignore
+            # otherwise add motifdb_annotation to the display name
+            try:
+                float(motifdb_annotation)  # will throw ValueError if this contains an annotation string
+                display_name = key
+            except ValueError:
+                display_name = '%s [%s]' % (key, motifdb_annotation)
+
+            pathway_dict[key] = {
+                'display_name': '%s' % display_name
+            }
+
+        # Create entity dictionary. An 'entity' is a MS1 peak (GNPS consensus cluster)
+        entity_dict = self._get_entity_dict(clustering_df)
+
+        # Create mapping dictionary that maps entities to pathways
+        mapping_dict = defaultdict(list)
+        for idx, row in motif_df.iterrows():
+            peak_id = str(row['scan'])
+            motif = row['motif']
+            mapping_dict[peak_id].append(motif)
+        mapping_dict = dict(mapping_dict)
+
+        # put everything together in a Database object
+        database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
+        return database
+
+    def _get_entity_dict(self, clustering_df):
+        # First turn the clustering dataframe to dictionary, with cluster index as the key
         clustering_df.index = clustering_df.index.astype('str')
         temp = clustering_df.to_dict(orient='index')
+
+        # Extract entity information from temp
+        # temp contains a lot of stuff we don't want, so copy selected values to entity_dict
         entity_dict = {}
         for peak_id in temp:
             entity_dict[peak_id] = {}
@@ -211,18 +289,9 @@ class GNPSLoader(Loader):
             entity_dict[peak_id]['precursor mass'] = temp[peak_id]['precursor mass']
             entity_dict[peak_id]['SumPeakIntensity'] = temp[peak_id]['SumPeakIntensity']
             entity_dict[peak_id]['componentindex'] = temp[peak_id]['componentindex']
+        return entity_dict
 
-        # Create mapping dictionary that maps entities to pathways
-        mapping_dict = {}
-        for peak_id in entity_dict:
-            component_index = str(entity_dict[peak_id]['componentindex'])
-            mapping_dict[peak_id] = [component_index]
-
-        # put everything together in a Database object
-        database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
-        return database
-
-    def _download_gnps(self, gnps_url):
+    def _download_gnps(self, gnps_url, view):
         """
         Downloads the zipped cytoscape data from GNPS and extract clustering and quantification dataframes from it.
         :param gnps_url: the url to the GNPS experiment, e.g.
@@ -237,29 +306,35 @@ class GNPSLoader(Loader):
         # send a post request to GNPS
         data = {
             'task': task,
-            'view': 'download_cytoscape_data'
+            'view': view
         }
         api_endpoint = 'https://gnps.ucsd.edu/ProteoSAFe/DownloadResult'
         r = requests.post(url=api_endpoint, data=data, stream=True)
 
         # extract clustering and quantification tables
         # https://stackoverflow.com/questions/37573483/progress-bar-while-download-file-over-http-with-requests
-        clustering_df = None
-        quantification_df = None
         total_size = int(r.headers.get('content-length', 0))
         block_size = 1024
-
-        t = tqdm(total=total_size, unit='iB', unit_scale=True)
-        with BytesIO() as f:
+        results = None
+        with BytesIO() as f, tqdm(total=total_size, unit='iB', unit_scale=True) as t:
             for data in r.iter_content(block_size):
                 t.update(len(data))
                 f.write(data)
-            clustering_df, quantification_df = self._parse_gnps(f)
-        t.close()
 
-        return clustering_df, quantification_df
+            if view == GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW:
+                clustering_df, quantification_df = self._parse_gnps_molfam(f)
+                results = {
+                    'clustering_df': clustering_df,
+                    'quantification_df': quantification_df
+                }
+            elif view == GNPS_VIEW_ALL_MOTIFS_VIEW:
+                motif_df = self._parse_ms2lda_motifs(f)
+                results = {
+                    'motif_df': motif_df
+                }
+        return results
 
-    def _parse_gnps(self, input_stream):
+    def _parse_gnps_molfam(self, input_stream):
         """
         Parses a zipped GNPS input stream, and extract clustering and quantification tables
         :param input_stream: a zipped input of GNPS results
@@ -280,3 +355,13 @@ class GNPSLoader(Loader):
                     quantification_df = pd.read_csv(z.open(filename), sep=',').set_index('row ID')
 
         return clustering_df, quantification_df
+
+    def _parse_ms2lda_motifs(self, input_stream):
+        motif_df = None
+        with zipfile.ZipFile(input_stream) as z:
+            for filename in z.namelist():
+                if 'view_all_motifs' in filename:
+                    logger.debug('Found motif table: %s' % filename)
+                    motif_df = pd.read_csv(z.open(filename), sep='\t')
+
+        return motif_df

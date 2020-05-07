@@ -25,7 +25,11 @@ DATABASE_REACTOME_KEGG = 'COMPOUND'
 DATABASE_REACTOME_CHEBI = 'ChEBI'
 DATABASE_REACTOME_UNIPROT = 'UniProt'
 DATABASE_REACTOME_ENSEMBL = 'ENSEMBL'
-DATABASE_GNPS = 'GNPS'
+DATABASE_GNPS_MOLECULAR_FAMILY = 'GNPS'
+DATABASE_GNPS_MS2LDA = 'MS2LDA'
+
+GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW = 'download_cytoscape_data'
+GNPS_VIEW_ALL_MOTIFS_VIEW = 'view_all_motifs'
 
 REACTOME_SPECIES_ARABIDOPSIS_THALIANA = 'Arabidopsis thaliana'
 REACTOME_SPECIES_BOS_TAURUS = 'Bos taurus'
@@ -51,7 +55,7 @@ GSEA_RANKING_LOGFC = 'log2_ratio_of_classes'
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
-GUI_MOLECULAR_FAMILY_ANALYSIS = 'Molecular Family (GNPS) Analysis'
+GUI_GNPS_ANALYSIS = 'GNPS Analysis'
 
 
 def load_json(json_file, compressed=False):

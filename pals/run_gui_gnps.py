@@ -8,7 +8,7 @@ from pals.feature_extraction import DataSource
 from pals.loader import GNPSLoader
 
 
-def show_gnps_widgets(gnps_url, metadata_csv):
+def show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv):
     metadata_df = pd.read_csv(metadata_csv)
     choices = metadata_df['group'].unique()
 
@@ -31,7 +31,8 @@ def show_gnps_widgets(gnps_url, metadata_csv):
         'case': case,
         'control': control,
         'metadata_df': metadata_df,
-        'gnps_url': gnps_url
+        'gnps_url': gnps_url,
+        'ms2lda_url': ms2lda_url
     }
     return parameters
 
@@ -43,11 +44,12 @@ def run_gnps_analysis(params):
     comp_name = '%s/%s' % (case, control)
     comparisons = [{'case': case, 'control': control, 'name': comp_name}, ]
     gnps_url = params['gnps_url']
+    ms2lda_url = params['ms2lda_url']
     metadata_df = params['metadata_df']
 
     # perform a POST request to get the downloadable Cytoscape results from GNPS
     # convert the retrieved data to a DataSource object
-    database = fetch_GNPS_data(gnps_url, metadata_df, comparisons)
+    database = fetch_GNPS_data(gnps_url, ms2lda_url, metadata_df, comparisons)
 
     # convert to a DataSource object that can be used by PLAGE
     ds = to_data_source(database)
@@ -65,15 +67,20 @@ def run_gnps_analysis(params):
         'all_samples': all_samples,
         'entity_dict': entity_dict,
         'intensities_df': intensities_df,
-        'dataset_pathways_to_row_ids': dataset_pathways_to_row_ids
+        'dataset_pathways_to_row_ids': dataset_pathways_to_row_ids,
+        'database_name': database.database_name
     }
     return results
 
 
 @st.cache(suppress_st_warning=True)
-def fetch_GNPS_data(gnps_url, metadata_df, comparisons):
-    database_name = DATABASE_GNPS
-    loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons)
+def fetch_GNPS_data(gnps_url, ms2lda_url, metadata_df, comparisons):
+    if ms2lda_url is not None and len(ms2lda_url) > 0:
+        database_name = DATABASE_GNPS_MS2LDA
+        loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=ms2lda_url)
+    else:
+        database_name = DATABASE_GNPS_MOLECULAR_FAMILY
+        loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons)
     database = loader.load_data()
     return database
 
@@ -142,16 +149,17 @@ def show_gnps_results(df, results):
     entity_dict = results['entity_dict']
     intensities_df = results['intensities_df']
     dataset_pathways_to_row_ids = results['dataset_pathways_to_row_ids']
+    database_name = results['database_name']
 
     # write header -- metabolite family ranking
-    st.header('Molecular Family Ranking')
+    st.header('Component Ranking')
     st.write(
-        ' The following table shows a ranking of molecular families ("components") based on their activity levels. '
-        'Entries in the table can be filtered by p-values and the number of members ("clusters") for each '
-        'molecular family.')
+        ' The following table shows a ranking of **components** (either molecular families or Mass2Motifs) based on '
+        'their activity levels. Entries in the table can be filtered by p-values and the number of member spectra '
+        'in each component.')
 
     # filter by significant p-values
-    pval_threshold = st.slider('Filter molecular families with p-values less than', min_value=0.0, max_value=1.0,
+    pval_threshold = st.slider('Filter components with p-values less than', min_value=0.0, max_value=1.0,
                                value=0.05,
                                step=0.05)
     df = df[df['p-value'] <= pval_threshold].copy()
@@ -159,17 +167,18 @@ def show_gnps_results(df, results):
     # filter by formula hits
     min_hits = 1
     max_hits = max(df['No. of members'])
-    formula_threshold = st.slider('Filter molecular families having members at least', min_value=min_hits,
+    min_threshold = 10 if database_name == DATABASE_GNPS_MOLECULAR_FAMILY else 5
+    formula_threshold = st.slider('Filter components having members at least', min_value=min_hits,
                                   max_value=max_hits,
-                                  value=10, step=1)
+                                  value=min_threshold, step=1)
     df = df[df['No. of members'] >= formula_threshold]
 
     st.markdown(get_table_download_link(df), unsafe_allow_html=True)
     st.write(df)
 
     # write header -- pathway info
-    st.header('Molecular Family Browser')
-    st.write('To display additional information on significantly changing molecular families, please select them in'
+    st.header('Component Browser')
+    st.write('To display additional information on significantly changing components, please select them in'
              ' the list below. Entries are listed in ascending order according to their activity p-values and the'
              ' number of members.')
 
@@ -182,8 +191,12 @@ def show_gnps_results(df, results):
     selected = st.selectbox(
         'Select molecular family', choices)
 
+    # if this is molecular family analysis, the selected name will be e.g. 'Molecular Family #123 (...)'
+    # since we split by space, we take the token at position 2 and remove the first character to get the index
+    # otherwise if this is e.g. MS2LDA analysis, the selected name will be e.g. 'motif_123 (...), so
+    # we just take the first token as the index
     tokens = selected.split(' ')
-    idx = tokens[2][1:]
+    idx = tokens[2][1:] if database_name == DATABASE_GNPS_MOLECULAR_FAMILY else tokens[0]
     row = df.loc[idx, :]
     # st.write(row)
 
