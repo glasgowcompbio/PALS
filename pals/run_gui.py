@@ -30,6 +30,7 @@ def max_width():
 
 
 def main():
+    st.title('PALS - Pathway Activity Level Scoring')
     image_url = 'https://raw.githubusercontent.com/glasgowcompbio/PALS/master/images/logo_transparent.png'
     st.sidebar.image(image_url, use_column_width=True)
     st.sidebar.header('Analysis Type')
