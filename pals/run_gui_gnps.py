@@ -196,7 +196,7 @@ def show_gnps_results(df, results):
     df = df[df['No. of members'] >= formula_threshold]
 
     st.markdown(get_table_download_link(df), unsafe_allow_html=True)
-    st.write(df)
+    st.write(df.style.format({'p-value': '{:.6e}'}))
 
     # write header -- pathway info
     st.header('Component Browser')
@@ -209,7 +209,7 @@ def show_gnps_results(df, results):
         pw_name = row['Components']
         p_value = row['p-value']
         no_members = row['No. of members']
-        choices.append('%s (p-value=%.4f, members=%d)' % (pw_name, p_value, no_members))
+        choices.append('%s (p-value=%.6e, members=%d)' % (pw_name, p_value, no_members))
     selected = st.selectbox(
         'Select component', choices)
 

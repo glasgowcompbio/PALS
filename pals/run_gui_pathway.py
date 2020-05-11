@@ -282,7 +282,7 @@ def show_pathway_results(df, use_reactome, token):
             row = df.loc[stId]
             p_value = row['p-value']
             num_hits = row['Formula Hits']
-            subsubheader = '#### p-value: %.4f' % p_value
+            subsubheader = '#### p-value: %.6f' % p_value
             st.write(subsubheader)
             subsubheader = '#### Formula Hits: %d' % (num_hits)
             st.write(subsubheader)
