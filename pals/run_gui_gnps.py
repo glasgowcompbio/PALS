@@ -8,8 +8,20 @@ from pals.feature_extraction import DataSource
 from pals.loader import GNPSLoader
 
 
-def show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv):
+def show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv, peak_table_csv):
     metadata_df = pd.read_csv(metadata_csv)
+
+    # keep only groups with >1 members in metadata_df
+    keep = []
+    remove = []
+    for k, v in metadata_df.groupby('group'):
+        if len(v['sample'].values.tolist()) > 1:
+            keep.append(k)
+        else:
+            remove.append(k)
+    st.warning('The following groups are removed because they only have 1 sample: %s' % remove)
+
+    metadata_df = metadata_df[metadata_df['group'].isin(keep)]
     choices = metadata_df['group'].unique()
 
     st.sidebar.subheader('Comparisons')
@@ -27,18 +39,24 @@ def show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv):
         st.error("Control ('%s') cannot be the same as case ('%s')." % (control, case))
         return
 
+    peak_table_df = None
+    if peak_table_csv is not None:
+        peak_table_df = pd.read_csv(peak_table_csv, index_col=0)
+
     parameters = {
         'case': case,
         'control': control,
         'metadata_df': metadata_df,
         'gnps_url': gnps_url,
-        'ms2lda_url': ms2lda_url
+        'ms2lda_url': ms2lda_url,
+        'peak_table_df': peak_table_df
     }
     return parameters
 
 
 @st.cache
-def run_gnps_analysis(params):
+def run_analysis(params):
+    # unpack parameters
     case = params['case']
     control = params['control']
     comp_name = '%s/%s' % (case, control)
@@ -46,10 +64,11 @@ def run_gnps_analysis(params):
     gnps_url = params['gnps_url']
     ms2lda_url = params['ms2lda_url']
     metadata_df = params['metadata_df']
+    peak_table_df = params['peak_table_df']
 
     # perform a POST request to get the downloadable Cytoscape results from GNPS
     # convert the retrieved data to a DataSource object
-    database = fetch_GNPS_data(gnps_url, ms2lda_url, metadata_df, comparisons)
+    database = get_data(gnps_url, ms2lda_url, metadata_df, comparisons, peak_table_df)
 
     # convert to a DataSource object that can be used by PLAGE
     ds = to_data_source(database)
@@ -60,7 +79,7 @@ def run_gnps_analysis(params):
     count_col = 'unq_pw_F'
     df.sort_values([p_value_col, count_col], ascending=[True, False], inplace=True)
 
-    all_groups, all_samples, entity_dict, intensities_df, dataset_pathways_to_row_ids = get_plot_data(ds)
+    all_groups, all_samples, entity_dict, intensities_df, dataset_pathways_to_row_ids = get_plot_data(ds, case, control)
     results = {
         'df': df,
         'all_groups': all_groups,
@@ -74,10 +93,11 @@ def run_gnps_analysis(params):
 
 
 @st.cache(suppress_st_warning=True)
-def fetch_GNPS_data(gnps_url, ms2lda_url, metadata_df, comparisons):
+def get_data(gnps_url, ms2lda_url, metadata_df, comparisons, peak_table_df):
     if ms2lda_url is not None and len(ms2lda_url) > 0:
         database_name = DATABASE_GNPS_MS2LDA
-        loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=ms2lda_url)
+        loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=ms2lda_url,
+                            peak_table_df=peak_table_df)
     else:
         database_name = DATABASE_GNPS_MOLECULAR_FAMILY
         loader = GNPSLoader(database_name, gnps_url, metadata_df, comparisons)
@@ -90,7 +110,7 @@ def to_data_source(database):
     measurement_df = database.extra_data['measurement_df']
     annotation_df = database.extra_data['annotation_df']
     experimental_design = database.extra_data['experimental_design']
-    ds = DataSource(measurement_df, annotation_df, experimental_design, None, database=database)
+    ds = DataSource(measurement_df, annotation_df, experimental_design, None, database=database, min_replace=SMALL)
     return ds
 
 
@@ -104,14 +124,15 @@ def PLAGE_decomposition(ds):
 
 
 @st.cache
-def get_plot_data(gnps_ds):
+def get_plot_data(gnps_ds, case, control):
     experimental_design = gnps_ds.get_experimental_design()
     all_samples = []
     all_groups = []
     for group in experimental_design['groups']:
-        samples = experimental_design['groups'][group]
-        all_samples.extend(samples)
-        all_groups.extend([group] * len(samples))
+        if group == case or group == control:
+            samples = experimental_design['groups'][group]
+            all_samples.extend(samples)
+            all_groups.extend([group] * len(samples))
     entity_dict = gnps_ds.entity_dict
     intensities_df = gnps_ds.standardize_intensity_df()
     dataset_pathways_to_row_ids = gnps_ds.dataset_pathways_to_row_ids
@@ -167,7 +188,7 @@ def show_gnps_results(df, results):
     # filter by formula hits
     min_hits = 1
     max_hits = max(df['No. of members'])
-    min_threshold = 10 if database_name == DATABASE_GNPS_MOLECULAR_FAMILY else 5
+    min_threshold = 10
     formula_threshold = st.slider('Filter components having members at least', min_value=min_hits,
                                   max_value=max_hits,
                                   value=min_threshold, step=1)
@@ -189,7 +210,7 @@ def show_gnps_results(df, results):
         no_members = row['No. of members']
         choices.append('%s (p-value=%.4f, members=%d)' % (pw_name, p_value, no_members))
     selected = st.selectbox(
-        'Select molecular family', choices)
+        'Select component', choices)
 
     # if this is molecular family analysis, the selected name will be e.g. 'Molecular Family #123 (...)'
     # since we split by space, we take the token at position 2 and remove the first character to get the index
@@ -198,7 +219,7 @@ def show_gnps_results(df, results):
     tokens = selected.split(' ')
     idx = tokens[2][1:] if database_name == DATABASE_GNPS_MOLECULAR_FAMILY else tokens[0]
     row = df.loc[idx, :]
-    # st.write(row)
+    st.write(row)
 
     members = dataset_pathways_to_row_ids[idx]
     member_df = get_member_df(entity_dict, members)
@@ -210,33 +231,44 @@ def get_member_df(entity_dict, members):
     # get group info
     # print('%s p-value=%.4f' % (pw_name, p_value))
     data = []
+    from_gnps = True
     for member in members:
         member_info = entity_dict[member]
         unique_id = member_info['unique_id']
-        library_id = member_info['LibraryID']
-        gnps_linkout_network = member_info['GNPSLinkout_Network']
-        no_spectra = member_info['number of spectra']
-        rt = member_info['RTConsensus']
-        mz = member_info['precursor mass']
-        intensity = member_info['SumPeakIntensity']
-        temp = [unique_id, library_id, mz, rt, intensity, no_spectra, gnps_linkout_network]
+        mz = member_info['mass']
+        rt = member_info['RT']
+        try:
+            intensity = member_info['SumPeakIntensity']
+            library_id = member_info['LibraryID']
+            gnps_linkout_network = member_info['GNPSLinkout_Network']
+            no_spectra = member_info['number of spectra']
+            temp = [unique_id, library_id, mz, rt, intensity, no_spectra, gnps_linkout_network]
+        except KeyError:
+            from_gnps = False
+            temp = [unique_id, mz, rt]
         data.append(temp)
-    member_df = pd.DataFrame(data, columns=['id', 'LibraryID', 'Precursor m/z', 'RTConsensus', 'PrecursorInt',
-                                            'no_spectra', 'link']).set_index('id')
+
+    if from_gnps:
+        member_df = pd.DataFrame(data, columns=['id', 'LibraryID', 'Precursor m/z', 'RTConsensus', 'PrecursorInt',
+                                                'no_spectra', 'link']).set_index('id')
+    else:
+        member_df = pd.DataFrame(data, columns=['id', 'mass', 'RT']).set_index('id')
     return member_df
 
 
 def display_member_df(member_df):
     st.subheader('Members')
-    member_df['link'] = member_df['link'].apply(make_clickable)
-    # https://discuss.streamlit.io/t/display-urls-in-dataframe-column-as-a-clickable-hyperlink/743/5
-    st.write(member_df.to_html(escape=False), unsafe_allow_html=True)
-
+    if 'link' in member_df.columns:
+        member_df['link'] = member_df['link'].apply(make_clickable)
+        # https://discuss.streamlit.io/t/display-urls-in-dataframe-column-as-a-clickable-hyperlink/743/5
+        st.write(member_df.to_html(escape=False), unsafe_allow_html=True)
+    else:
+        st.write(member_df)
 
 def plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, row):
     # Create a categorical palette to identify the networks
     used_groups = list(set(all_groups))
-    group_pal = sns.husl_palette(len(used_groups), s=.45)
+    group_pal = sns.husl_palette(len(used_groups), s=.90)
     group_lut = dict(zip(map(str, used_groups), group_pal))
 
     # Convert the palette to vectors that will be drawn on the side of the matrix
@@ -246,9 +278,9 @@ def plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, ro
 
     # plot heatmap
     g = sns.clustermap(group_intensities, center=0, cmap='vlag', col_colors=group_colours,
-                       col_cluster=False, linewidths=0.75, cbar_pos=(1.0, 0.3, 0.05, 0.5))
+                       col_cluster=False, linewidths=0.75, cbar_pos=(0.1, 0.05, 0.05, 0.18))
     pw_name = row['Components']
-    plt.suptitle('%s' % (pw_name), fontsize=24, y=0.9)
+    plt.suptitle('%s' % (pw_name), fontsize=18, y=0.89)
 
     # draw group legend
     for group in used_groups:
@@ -256,12 +288,16 @@ def plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, ro
     g.ax_col_dendrogram.legend(loc="right")
 
     # make the annotated peaks to have labels in bold
-    annotated_df = member_df[member_df['LibraryID'].notnull()]
-    annotated_peaks = annotated_df.index.values
-    for label in g.ax_heatmap.get_yticklabels():
-        if label.get_text() in annotated_peaks:
-            label.set_weight("bold")
-            label.set_color("green")
+    try:
+        annotated_df = member_df[member_df['LibraryID'].notnull()]
+        annotated_peaks = annotated_df.index.values
+        for label in g.ax_heatmap.get_yticklabels():
+            if label.get_text() in annotated_peaks:
+                label.set_weight("bold")
+                label.set_color("green")
+    except KeyError:
+        pass
+
     plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0)
 
     # render plot

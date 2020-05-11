@@ -19,6 +19,7 @@ PLAGE_WEIGHT = 1
 HG_WEIGHT = 0  # TODO: remove this?
 SIGNIFICANT_THRESHOLD = 0.05
 GSEA_SIGNIFICANT_THRESHOLD = 0.25
+SMALL = 1E-6
 
 DATABASE_PIMP_KEGG = 'PiMP_KEGG'
 DATABASE_REACTOME_KEGG = 'COMPOUND'
@@ -55,8 +56,8 @@ GSEA_RANKING_LOGFC = 'log2_ratio_of_classes'
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
-GUI_GNPS_ANALYSIS = 'GNPS Analysis'
-
+GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS = 'GNPS Molecular Family Analysis'
+GUI_GNPS_MS2LDA_ANALYSIS = 'GNPS-MS2LDA Analysis'
 
 def load_json(json_file, compressed=False):
     if compressed:

@@ -7,7 +7,7 @@ sys.path.append('.')
 
 from pals.run_gui_pathway import show_pathway_widgets, run_pathway_analysis, process_pathway_results, \
     show_pathway_results
-from pals.run_gui_gnps import show_gnps_widgets, run_gnps_analysis, process_gnps_results, show_gnps_results
+from pals.run_gui_gnps import show_gnps_widgets, run_analysis, process_gnps_results, show_gnps_results
 from pals.common import *
 
 # pandas display options
@@ -36,13 +36,16 @@ def main():
     st.sidebar.header('Analysis Type')
     analysis_type = st.sidebar.radio(
         "Please choose an analysis to perform",
-        (GUI_PATHWAY_ANALYSIS, GUI_GNPS_ANALYSIS))
+        (GUI_PATHWAY_ANALYSIS, GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS, GUI_GNPS_MS2LDA_ANALYSIS))
 
     if analysis_type == GUI_PATHWAY_ANALYSIS:
 
-        st.sidebar.subheader('Input Data')
+        st.sidebar.subheader('Peak Data')
         intensity_csv = st.sidebar.file_uploader("Choose an intensity CSV file", type=['txt', 'csv'])
+
+        st.sidebar.subheader('Annotation Data')
         annotation_csv = st.sidebar.file_uploader("Choose an annotation CSV file", type=['txt', 'csv'])
+
         if intensity_csv is not None and annotation_csv is not None:  # data is loaded
             params = show_pathway_widgets(intensity_csv, annotation_csv)
             significant_column = '%s/%s p-value' % (params['case'], params['control'])
@@ -57,18 +60,46 @@ def main():
         else:
             write_main_text(analysis_type)
 
-    elif analysis_type == GUI_GNPS_ANALYSIS:
+    elif analysis_type == GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS:
 
-        st.sidebar.subheader('Input Data')
-        gnps_url = st.sidebar.text_input('Provide a link to GNPS Molecular Networking results')
-        ms2lda_url = st.sidebar.text_input('Optional: for motif-based analysis, provide a link to GNPS-MS2LDA results')
+        st.sidebar.subheader('Molecular Family Data')
+        gnps_url = st.sidebar.text_input('Provide a link to GNPS FBMN results')
+
+        st.sidebar.subheader('Metadata')
         metadata_csv = st.sidebar.file_uploader("Choose a metadata CSV file", type=['txt', 'csv'])
+
         if len(gnps_url) > 0 and metadata_csv is not None:  # data is loaded
-            params = show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv)
+            params = show_gnps_widgets(gnps_url, None, metadata_csv, None)
             significant_column = '%s/%s p-value' % (params['case'], params['control'])
 
             # run PLAGE on the GNPS data
-            results = run_gnps_analysis(params)
+            results = run_analysis(params)
+            df = process_gnps_results(results['df'], significant_column)
+            show_gnps_results(df, results)
+        else:
+            write_main_text(analysis_type)
+
+    elif analysis_type == GUI_GNPS_MS2LDA_ANALYSIS:
+
+        st.sidebar.subheader('Motif Data')
+        ms2lda_url = st.sidebar.text_input('Provide a link to GNPS-MS2LDA results')
+        motif_available = len(ms2lda_url) > 0
+
+        st.sidebar.subheader('Peak Data')
+        gnps_url = st.sidebar.text_input('Provide either a link to GNPS FBMN results')
+        peak_table_csv = st.sidebar.file_uploader('Or upload a peak table in CSV format', type=['txt', 'csv'])
+        peak_data_available = len(gnps_url) > 0 or peak_table_csv is not None
+
+        st.sidebar.subheader('Metadata')
+        metadata_csv = st.sidebar.file_uploader("Choose a metadata CSV file", type=['txt', 'csv'])
+        metadata_available = metadata_csv is not None
+
+        if motif_available and peak_data_available and metadata_available:  # data is loaded
+            params = show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv, peak_table_csv)
+            significant_column = '%s/%s p-value' % (params['case'], params['control'])
+
+            # run PLAGE on the GNPS data
+            results = run_analysis(params)
             df = process_gnps_results(results['df'], significant_column)
             show_gnps_results(df, results)
         else:
@@ -95,16 +126,34 @@ def write_main_text(analysis_type):
                  'glasgowcompbio/PALS/master/notebooks/test_data/HAT/annotation_df.csv)) CSV files from the sidebar. Next, '
                  'select the case and control groups, the pathway analysis method as well as the database to use.')
 
-    elif analysis_type == GUI_GNPS_ANALYSIS:
-        st.subheader(GUI_GNPS_ANALYSIS)
+    elif analysis_type == GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS:
+        st.subheader(GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS)
         st.write(
             'Please provide a link to your FBMN results at GNPS ([example](https://'
-            'gnps.ucsd.edu/ProteoSAFe/status.jsp?task=0a8432b5891a48d7ad8459ba4a89969f)). Optionally, if you have '
-            'performed motif-based analysis through MS2LDA-GNPS and would like to analyse it through PALS, '
-            'please provide the link as well ([example](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=7c34badae00e43bc87b195a706cf1f43)). '
-            'Finally provide a metadata CSV file ([example](https://github.com/glasgowcompbio/PALS/raw/master/notebooks/test_data/AGP/'
-            'AG_Plants_extremes_metadata_df.csv)). Select the case and control groups to begin.')
+            'gnps.ucsd.edu/ProteoSAFe/status.jsp?task=0a8432b5891a48d7ad8459ba4a89969f)). Also provide a metadata CSV'
+            ' file ([example](https://github.com/glasgowcompbio/PALS/raw/master/notebooks/test_data/AGP/'
+            'AG_Plants_extremes_metadata_df.csv)) describing the assignment of samples to groups. '
+            'Select the case and control groups to begin.')
 
+    elif analysis_type == GUI_GNPS_MS2LDA_ANALYSIS:
+        st.subheader(GUI_GNPS_MS2LDA_ANALYSIS)
+        st.write(
+            'Please provide a link to your motif-based analysis results through GNPS-MS2LDA. '
+            'Next provide MS1 intensity information, either through a link to your FBMN results at GNPS or by '
+            'uploading the peak table directly. Finally provide a metadata CSV file describing the assignment of '
+            'samples to groups. Select the case and control groups to begin. Two example datasets are provided below.')
+        st.write(
+            '- American Gut Project dataset -- '
+            '**motif data:** [[GNPS-MS2LDA results]](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=7c34badae00e43bc87b195a706cf1f43), '
+            '**peak data:** [[GNPS-FBMN results]](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=0a8432b5891a48d7ad8459ba4a89969f), '
+            '**metadata:** [[Metadata CSV]](https://github.com/glasgowcompbio/PALS/raw/master/notebooks/test_data/AGP/AG_Plants_extremes_metadata_df.csv)'
+        )
+        st.write(
+            '- Rhamnaceae dataset -- '
+            '**motif data:** [[GNPS-MS2LDA results]](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=b33b2697e7924ee1920dba207ed57733), '
+            '**peak data:** [[Peak table CSV]](https://github.com/glasgowcompbio/PALS/raw/master/notebooks/test_data/Rhamnaceae/171205_71extracts_MS1peaktable_MS2LDA_comma.csv), '
+            '**metadata:** [[Metadata CSV]](https://github.com/glasgowcompbio/PALS/raw/master/notebooks/test_data/Rhamnaceae/MetaData_Rhamnaceae.csv)'
+        )
 
 max_width()
 main()

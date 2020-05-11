@@ -1,6 +1,6 @@
 import os
 import zipfile
-from collections import defaultdict
+from collections import defaultdict, Counter
 from io import BytesIO
 
 import pandas as pd
@@ -127,7 +127,7 @@ class EnsemblLoader(Loader):
 
 
 class GNPSLoader(Loader):
-    def __init__(self, database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=None):
+    def __init__(self, database_name, gnps_url, metadata_df, comparisons, gnps_ms2lda_url=None, peak_table_df=None):
         self.database_name = database_name
         self.gnps_url = gnps_url
         self.metadata_df = metadata_df
@@ -135,38 +135,61 @@ class GNPSLoader(Loader):
         self.int_df = None
         self.annotation_df = None
         self.gnps_ms2lda_url = gnps_ms2lda_url
+        self.peak_table_df = peak_table_df
+
         if self.database_name == DATABASE_GNPS_MS2LDA:
             assert self.gnps_ms2lda_url is not None
 
     def load_data(self):
-        logger.info('Retrieving clustering and quantification information from GNPS')
-        logger.debug(self.gnps_url)
-        results = self._download_gnps(self.gnps_url, GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW)
-        assert results is not None
-        quantification_df = results['quantification_df']
-        clustering_df = results['clustering_df']
-        filtered_clustering_df = clustering_df[
-            clustering_df['componentindex'] != -1]  # drop all the singleton components
+        if self.peak_table_df is not None:  # load measurements from a peak table
+            logger.info('Processing peak table')
+            logger.debug(self.peak_table_df)
 
-        # keep only columns containing 'Peak area', and remove 'Peak area' from column names
-        measurement_df = quantification_df.filter(regex='Peak area')
-        measurement_df.columns = measurement_df.columns.str.rstrip('Peak area')
-        measurement_df.index.rename('peak_id', inplace=True)
-        measurement_df.index = measurement_df.index.astype('str')
+            # drop the first (m/z) and second (RT) columns to get the measurement df
+            cols = [0, 1]
+            measurement_df = self.peak_table_df.drop(self.peak_table_df.columns[cols], axis=1)
+            measurement_df.index.rename('peak_id', inplace=True)
+            measurement_df.index = measurement_df.index.astype('str')
 
+            # FIXME: really shouldn't be called this
+            clustering_df = self.peak_table_df[self.peak_table_df.columns[cols]]
+
+            # create annotation dataframe
+            annotation_df = pd.DataFrame(index=measurement_df.index)
+            annotation_df.index.rename('peak_id', inplace=True)
+            annotation_df['entity_id'] = measurement_df.index
+            annotation_df['entity_id'] = annotation_df['entity_id'].astype(str)
+            annotation_df.index = annotation_df.index.astype('str')
+
+        else:  # load measurements from GNPS
+            logger.info('Retrieving clustering and quantification information from GNPS')
+            logger.debug(self.gnps_url)
+            results = self._download_gnps(self.gnps_url, GNPS_DOWNLOAD_CYTOSCAPE_DATA_VIEW)
+            assert results is not None
+            quantification_df = results['quantification_df']
+            clustering_df = results['clustering_df']
+            filtered_clustering_df = clustering_df[
+                clustering_df['componentindex'] != -1]  # drop all the singleton components
+
+            # keep only columns containing 'Peak area', and remove 'Peak area' from column names
+            measurement_df = quantification_df.filter(regex='Peak area')
+            measurement_df.columns = measurement_df.columns.str.rstrip('Peak area')
+            measurement_df.index.rename('peak_id', inplace=True)
+            measurement_df.index = measurement_df.index.astype('str')
+
+            # create annotation dataframe
+            annotation_df = pd.DataFrame(index=filtered_clustering_df.index)
+            annotation_df.index.rename('peak_id', inplace=True)
+            annotation_df['entity_id'] = filtered_clustering_df.index
+            annotation_df['entity_id'] = annotation_df['entity_id'].astype(str)
+            annotation_df.index = annotation_df.index.astype('str')
+
+        # filter dataframes
         # assume metadata_df has two columns: 'sample' and 'group'
         # remove rows with sample id that can't be found in the columns of int_df
         metadata_df = self.metadata_df[self.metadata_df['sample'].isin(measurement_df.columns.values)]
-
         # keep only columns in int_df that have group information
         measurement_df = measurement_df[metadata_df['sample']]
-
-        # create annotation dataframe
-        annotation_df = pd.DataFrame(index=filtered_clustering_df.index)
-        annotation_df.index.rename('peak_id', inplace=True)
-        annotation_df['entity_id'] = filtered_clustering_df.index
-        annotation_df['entity_id'] = annotation_df['entity_id'].astype(str)
-        annotation_df.index = annotation_df.index.astype('str')
 
         # create experimental design dictionary
         groups = {}
@@ -197,7 +220,19 @@ class GNPSLoader(Loader):
 
             results = self._download_gnps(self.gnps_ms2lda_url, GNPS_VIEW_ALL_MOTIFS_VIEW)
             motif_df = results['motif_df']
-            database = self._motif_to_database(clustering_df, motif_df, extra_data)
+
+            # select some useful columns to display later
+            # need to include all peaks, so we select the columns from clustering_df (instead of filtered_clustering_df)
+            try:
+                peak_info_df = clustering_df[['parent mass', 'LibraryID', 'GNPSLinkout_Network', 'number of spectra',
+                                              'RTConsensus', 'precursor mass', 'SumPeakIntensity', 'componentindex']]
+                peak_info_df.rename(columns={
+                    'precursor mass': 'mass',
+                    'RTConsensus': 'RT'
+                })
+            except KeyError:
+                peak_info_df = clustering_df[['mass', 'RT']]
+            database = self._motif_to_database(peak_info_df, motif_df, extra_data)
 
         return database
 
@@ -228,18 +263,30 @@ class GNPSLoader(Loader):
         database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
         return database
 
-    def _motif_to_database(self, clustering_df, motif_df, extra_data):
+    def _motif_to_database(self, peak_info_df, motif_df, extra_data):
         """
         Creates a user-defined database from GNPS-MS2LDA results
-        :param clustering_df: a dataframe of clustering information
+        :param peak_info_df: a dataframe of additional information for peaks
         :param motif_df: a dataframe of LDA analysis from GNPS-MS2LDA
         :param extra_data: additional information to include in the database
         :return: a Database object from GNPS-MS2LDA results
         """
+        # find singleton motifs
+        c = Counter()
+        for idx, row in motif_df.iterrows():
+            motif = row['motif']
+            c[motif] += 1
+
+        motifs = motif_df['motif'].unique()
+        singletons = [motif for motif in motifs if c[motif] == 1]
+
         # Create 'pathway' dictionary. In this case, 'pathway' is a GNPS-MS2LDA motif
         pathway_dict = {}
         for idx, row in motif_df.iterrows():
             key = row['motif']
+            if key in singletons:
+                continue
+
             motifdb_url = row['motifdb_url']
             motifdb_annotation = row['motifdb_annotation']
 
@@ -252,17 +299,21 @@ class GNPSLoader(Loader):
                 display_name = '%s [%s]' % (key, motifdb_annotation)
 
             pathway_dict[key] = {
-                'display_name': '%s' % display_name
+                'display_name': '%s' % display_name,
+                'motifdb_url': motifdb_url,
+                'motifdb_annotation': motifdb_annotation
             }
 
         # Create entity dictionary. An 'entity' is a MS1 peak (GNPS consensus cluster)
-        entity_dict = self._get_entity_dict(clustering_df)
+        entity_dict = self._get_entity_dict(peak_info_df)
 
         # Create mapping dictionary that maps entities to pathways
         mapping_dict = defaultdict(list)
         for idx, row in motif_df.iterrows():
             peak_id = str(row['scan'])
             motif = row['motif']
+            if motif in singletons:
+                continue
             mapping_dict[peak_id].append(motif)
         mapping_dict = dict(mapping_dict)
 
@@ -270,10 +321,10 @@ class GNPSLoader(Loader):
         database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
         return database
 
-    def _get_entity_dict(self, clustering_df):
-        # First turn the clustering dataframe to dictionary, with cluster index as the key
-        clustering_df.index = clustering_df.index.astype('str')
-        temp = clustering_df.to_dict(orient='index')
+    def _get_entity_dict(self, peak_info_df):
+        # First turn the peak info dataframe to dictionary, with peak id as the key
+        peak_info_df.index = peak_info_df.index.astype('str')
+        temp = peak_info_df.to_dict(orient='index')
 
         # Extract entity information from temp
         # temp contains a lot of stuff we don't want, so copy selected values to entity_dict
@@ -281,14 +332,17 @@ class GNPSLoader(Loader):
         for peak_id in temp:
             entity_dict[peak_id] = {}
             entity_dict[peak_id]['unique_id'] = peak_id
-            entity_dict[peak_id]['display_name'] = temp[peak_id]['parent mass']
-            entity_dict[peak_id]['LibraryID'] = temp[peak_id]['LibraryID']
-            entity_dict[peak_id]['GNPSLinkout_Network'] = temp[peak_id]['GNPSLinkout_Network']
-            entity_dict[peak_id]['number of spectra'] = temp[peak_id]['number of spectra']
-            entity_dict[peak_id]['RTConsensus'] = temp[peak_id]['RTConsensus']
-            entity_dict[peak_id]['precursor mass'] = temp[peak_id]['precursor mass']
-            entity_dict[peak_id]['SumPeakIntensity'] = temp[peak_id]['SumPeakIntensity']
-            entity_dict[peak_id]['componentindex'] = temp[peak_id]['componentindex']
+            entity_dict[peak_id]['mass'] = temp[peak_id]['mass']
+            entity_dict[peak_id]['RT'] = temp[peak_id]['RT']
+            try:
+                entity_dict[peak_id]['display_name'] = temp[peak_id]['parent mass']
+                entity_dict[peak_id]['LibraryID'] = temp[peak_id]['LibraryID']
+                entity_dict[peak_id]['GNPSLinkout_Network'] = temp[peak_id]['GNPSLinkout_Network']
+                entity_dict[peak_id]['number of spectra'] = temp[peak_id]['number of spectra']
+                entity_dict[peak_id]['SumPeakIntensity'] = temp[peak_id]['SumPeakIntensity']
+                entity_dict[peak_id]['componentindex'] = temp[peak_id]['componentindex']
+            except KeyError:
+                pass
         return entity_dict
 
     def _download_gnps(self, gnps_url, view):

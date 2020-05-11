@@ -34,6 +34,8 @@ class DataSource(object):
         self.min_replace = min_replace
 
         self.groups = dict(self.experimental_design['groups'].items())
+        for group in self.groups:
+            assert len(self.groups[group]) > 1, 'Group %s must have more than 1 member' % group
         self.comparisons = self.experimental_design['comparisons']
 
         if database is None:
@@ -124,7 +126,9 @@ class DataSource(object):
         return database
 
     def get_measurements(self):
-        return self.measurement_df.copy()
+        df = self.measurement_df.copy()
+        df[df < 0] = 0 # prevent negative values in df
+        return df
 
     def get_annotations(self):
         return self.annotation_df.copy()
@@ -302,6 +306,7 @@ class DataSource(object):
         # Get the min_intensity value set for the analysis
         logger.debug("Setting the zero intensity values in the dataframe")
         measurement_df = self.get_measurements()
+        logger.debug(np.sum(np.sum(measurement_df < 0)))
 
         # Replace 0.0 with NaN for easier operations ahead
         measurement_df[measurement_df == 0.0] = None
