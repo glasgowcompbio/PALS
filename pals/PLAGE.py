@@ -273,14 +273,14 @@ class PLAGE(Method):
         pw_names = []
         for pw in pathways:
             row_ids = self.data_source.dataset_pathways_to_row_ids[pw]
-            pathway_data = measurement_df.loc[row_ids] / np.sqrt(len(row_ids))  # DF selected from peak IDs.
+            pathway_data = measurement_df.loc[row_ids]  # DF selected from peak IDs.
             w, d, c = np.linalg.svd(np.array(pathway_data))
 
             pw_name = self.data_source.pathway_dict[pw]['display_name']
             pw_act_list = []
             pw_act_list.append(pw)
             pw_names.append(pw_name)
-            pw_act_list.extend(list(c[0] * d[0]))
+            pw_act_list.extend(list(c[0]))
             pathway_activities.append(pw_act_list)
 
         activity_df = pd.DataFrame(pathway_activities).set_index([0])
