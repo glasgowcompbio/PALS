@@ -19,7 +19,8 @@ def show_gnps_widgets(gnps_url, ms2lda_url, metadata_csv, peak_table_csv):
             keep.append(k)
         else:
             remove.append(k)
-    st.warning('The following groups are removed because they only have 1 sample: %s' % remove)
+    if len(remove) > 0:
+        st.warning('The following groups are removed because they only have 1 sample: %s' % remove)
 
     metadata_df = metadata_df[metadata_df['group'].isin(keep)]
     choices = metadata_df['group'].unique()
