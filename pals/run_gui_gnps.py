@@ -88,8 +88,12 @@ def run_analysis(params):
         'entity_dict': entity_dict,
         'intensities_df': intensities_df,
         'dataset_pathways_to_row_ids': dataset_pathways_to_row_ids,
-        'database_name': database.database_name
+        'database_name': database.database_name,
     }
+
+    # quick hack to pass the motif db urls out for plotting/displaying
+    if 'motifdb_urls' in database.extra_data:
+        results['motifdb_urls'] = database.extra_data['motifdb_urls']
     return results
 
 
@@ -221,6 +225,15 @@ def show_gnps_results(df, results):
     idx = tokens[2][1:] if database_name == DATABASE_GNPS_MOLECULAR_FAMILY else tokens[0]
     row = df.loc[idx, :]
     st.write(row)
+
+    # write the link to MotifDB if available
+    if 'motifdb_urls' in results:
+        component = row['Components']
+        motifdb_url = results['motifdb_urls'][component]
+        try:
+            float(motifdb_url) # will throw ValueError if it actually contains a string, otherwise it's a nan
+        except ValueError:
+            st.write('Link to MotifDB: %s' % motifdb_url)
 
     members = dataset_pathways_to_row_ids[idx]
     member_df = get_member_df(entity_dict, members)

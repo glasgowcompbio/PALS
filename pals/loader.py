@@ -286,6 +286,7 @@ class GNPSLoader(Loader):
 
         # Create 'pathway' dictionary. In this case, 'pathway' is a GNPS-MS2LDA motif
         pathway_dict = {}
+        motifdb_urls = {}
         for idx, row in motif_df.iterrows():
             key = row['motif']
             if key in singletons:
@@ -307,6 +308,7 @@ class GNPSLoader(Loader):
                 'motifdb_url': motifdb_url,
                 'motifdb_annotation': motifdb_annotation
             }
+            motifdb_urls[display_name] = motifdb_url
 
         # Create entity dictionary. An 'entity' is a MS1 peak (GNPS consensus cluster)
         entity_dict = self._get_entity_dict(peak_info_df)
@@ -322,6 +324,7 @@ class GNPSLoader(Loader):
         mapping_dict = dict(mapping_dict)
 
         # put everything together in a Database object
+        extra_data['motifdb_urls'] = motifdb_urls
         database = Database(self.database_name, pathway_dict, entity_dict, mapping_dict, extra_data=extra_data)
         return database
 
