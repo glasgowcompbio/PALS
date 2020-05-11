@@ -251,6 +251,10 @@ def get_member_df(entity_dict, members):
     if from_gnps:
         member_df = pd.DataFrame(data, columns=['id', 'LibraryID', 'Precursor m/z', 'RTConsensus', 'PrecursorInt',
                                                 'no_spectra', 'link']).set_index('id')
+        member_df = member_df.rename(columns={
+            'Precursor m/z': 'mass',
+            'RTConsensus': 'RT'
+        })
     else:
         member_df = pd.DataFrame(data, columns=['id', 'mass', 'RT']).set_index('id')
     return member_df

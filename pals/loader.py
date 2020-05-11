@@ -212,6 +212,10 @@ class GNPSLoader(Loader):
         # If it's a standard FBMN-GNPS result, then use the clustering as the groups
         # otherwise if it is GNPS-MS2LDA result, then download the MS2LDA results from GNPS and use motifs as groups
         if self.database_name == DATABASE_GNPS_MOLECULAR_FAMILY:
+            filtered_clustering_df = filtered_clustering_df.rename(columns={
+                'precursor mass': 'mass',
+                'RTConsensus': 'RT'
+            })
             database = self._molfam_to_database(filtered_clustering_df, extra_data)
 
         elif self.database_name == DATABASE_GNPS_MS2LDA:
@@ -226,7 +230,7 @@ class GNPSLoader(Loader):
             try:
                 peak_info_df = clustering_df[['parent mass', 'LibraryID', 'GNPSLinkout_Network', 'number of spectra',
                                               'RTConsensus', 'precursor mass', 'SumPeakIntensity', 'componentindex']]
-                peak_info_df.rename(columns={
+                peak_info_df = peak_info_df.rename(columns={
                     'precursor mass': 'mass',
                     'RTConsensus': 'RT'
                 })
