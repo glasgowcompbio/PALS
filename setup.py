@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="PALS-pathway",
-    version="1.3.0",
+    version="1.3.1",
     author="Joe Wandy",
     author_email="joe.wandy@glasgow.ac.uk",
     description="Pathway-level Analysis of Metabolites Expression Data",

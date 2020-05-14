@@ -216,7 +216,7 @@ def show_pathway_results(df, use_reactome, token):
     df = df[df['Formula Hits'] >= formula_threshold]
 
     st.markdown(get_table_download_link(df), unsafe_allow_html=True)
-    st.write(df)
+    st.write(df.style.format({'p-value': '{:.6e}'}))
 
     # write header -- pathway info
     st.header('Pathway Browser')
