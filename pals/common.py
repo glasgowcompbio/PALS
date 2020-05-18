@@ -215,6 +215,7 @@ def get_table_download_link(df):
     in:  dataframe
     out: href string
     """
+    df = df.style.format({'p-value': '{:.6e}'})
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(
         csv.encode()
