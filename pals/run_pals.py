@@ -69,7 +69,11 @@ def build_parser():
     return parser
 
 
-def main(args):
+def main():
+    parser = build_parser()
+    parsed_args = parser.parse_args()
+    args = vars(parsed_args)
+
     logger.info('Welcome to Pathway Activity Level Scoring (PALS)')
     logger.debug('PARAMETERS:')
     for k, v in args.items():
@@ -140,7 +144,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = build_parser()
-    args = parser.parse_args()
-    fargs = vars(args)
-    main(fargs)
+    main()
