@@ -16,8 +16,14 @@ To use Reactome as pathway database, refer to the [setup guide](setup_guide.md).
 
 ### 3. Command-line Usage
 
-To run PALS from the command-line, the script *pals/run.py* is used. This script accepts a number of parameters, 
-documented here (**bold** indicates required parameters):
+To run PALS from the command-line, the script *pals/run_pals.py* is used. This script accepts a number of parameters, 
+documented below (**bold** indicates required parameters). 
+
+**Note: if you have installed PALS via pip, then *run_pals.py* or
+*run_pals.exe* will also be added to your path. It can be run directly by typing its name from the shell.**
+
+#### Parameters
+
 ```
 usage: run.py [-h] --db {PiMP_KEGG,COMPOUND,ChEBI,UniProt,ENSEMBL}
               --comparisons COMPARISONS [COMPARISONS ...]
@@ -49,6 +55,8 @@ beer1 (case) vs beer2 (control), as well as beer3 (case) vs beer4 (control).
 only metabolic pathways will be queried.
 - --connect_to_reactome_server: Whether to connect to an instance of Neo4j server hosting Reactome database 
 (online mode). If not specified, then offline mode (using a downloaded copy of selected Reactome pathways) will be used. 
+
+#### Examples
 
 The most basic usage of PALS is to run it in offline-mode using PLAGE as the decomposition method. This uses the 
 downloaded KEGG database for pathways. Here we run PALS on the example HAT data used in the manuscript
