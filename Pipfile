@@ -23,6 +23,7 @@ pillow = "*"
 jupyterlab = "*"
 bioservices = "*"
 ipyparallel = "*"
+twine = "*"
 
 [requires]
 python_version = "3"
