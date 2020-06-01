@@ -5,10 +5,12 @@ with open("README.md", "r") as fh:
 
 setup(
     name="PALS-pathway",
-    version="1.4.1",
+    version="1.4.2",
     author="Joe Wandy",
     author_email="joe.wandy@glasgow.ac.uk",
     description="A Python tool to rank significantly-changing metabolite sets",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url="https://github.com/glasgowcompbio/PALS",
     classifiers=[
         "Programming Language :: Python :: 3",
