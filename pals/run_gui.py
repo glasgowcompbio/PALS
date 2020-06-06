@@ -51,12 +51,13 @@ def main():
             significant_column = '%s/%s p-value' % (params['case'], params['control'])
 
             # run a pathway analysis method, e.g. PLAGE
-            df, token = run_pathway_analysis(params)
+            results = run_pathway_analysis(params)
+            df = results['df']
 
             # display pathway analysis results when available
             if df is not None:
                 df = process_pathway_results(df, significant_column)
-                show_pathway_results(df, params['use_reactome'], token)
+                show_pathway_results(df, params['use_reactome'], results, params['verbose_output'])
         else:
             write_main_text(analysis_type)
 

@@ -1,7 +1,9 @@
 from urllib.parse import quote
 
+import matplotlib.pyplot as plt
 import numpy as np
 import requests
+import seaborn as sns
 import streamlit as st
 from bioservices.kegg import KEGG
 
@@ -54,6 +56,7 @@ def show_pathway_widgets(intensity_csv, annotation_csv):
          DATABASE_REACTOME_ENSEMBL),
     )
     min_replace = st.sidebar.number_input('Minimum intensity for data imputation', value=MIN_REPLACE)
+    verbose_output = st.sidebar.checkbox('Verbose output', value=False)
 
     use_reactome = False
     if database_name in (DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, DATABASE_REACTOME_UNIPROT,
@@ -99,6 +102,7 @@ def show_pathway_widgets(intensity_csv, annotation_csv):
         'selected_method': selected_method,
         'database_name': database_name,
         'min_replace': min_replace,
+        'verbose_output': verbose_output,
         'use_reactome': use_reactome,
         'reactome_species': reactome_species,
         'reactome_metabolic_pathway_only': reactome_metabolic_pathway_only,
@@ -131,7 +135,20 @@ def run_pathway_analysis(params):
     if params['use_reactome']:
         token = send_expression_data(ds, params['case'], params['control'], params['reactome_species'])
 
-    return df, token
+    case = params['case']
+    control = params['control']
+    all_groups, all_samples, entity_dict, intensities_df, \
+        dataset_pathways_to_row_ids, dataset_row_id_to_unique_ids = get_plot_data(ds, case, control)
+    results = {
+        'df': df,
+        'token': token,
+        'all_groups': all_groups,
+        'all_samples': all_samples,
+        'intensities_df': intensities_df,
+        'dataset_pathways_to_row_ids': dataset_pathways_to_row_ids,
+        'dataset_row_id_to_unique_ids': dataset_row_id_to_unique_ids
+    }
+    return results
 
 
 @st.cache(suppress_st_warning=True)
@@ -168,6 +185,24 @@ def get_data_source(annotation_df, database_name, experimental_design, int_df, m
 
 
 @st.cache
+def get_plot_data(pathway_ds, case, control):
+    experimental_design = pathway_ds.get_experimental_design()
+    all_samples = []
+    all_groups = []
+    for group in experimental_design['groups']:
+        if group == case or group == control:
+            samples = experimental_design['groups'][group]
+            all_samples.extend(samples)
+            all_groups.extend([group] * len(samples))
+    entity_dict = pathway_ds.entity_dict
+    intensities_df = pathway_ds.standardize_intensity_df()
+    dataset_pathways_to_row_ids = pathway_ds.dataset_pathways_to_row_ids
+    dataset_row_id_to_unique_ids = pathway_ds.dataset_row_id_to_unique_ids
+    return all_groups, all_samples, entity_dict, intensities_df, dataset_pathways_to_row_ids, \
+           dataset_row_id_to_unique_ids
+
+
+@st.cache
 def process_pathway_results(df, significant_column):
     # filter results to show only the columns we want
     try:
@@ -196,7 +231,15 @@ def process_pathway_results(df, significant_column):
     return df
 
 
-def show_pathway_results(df, use_reactome, token):
+def show_pathway_results(df, use_reactome, results, verbose_output):
+    # unpack results
+    token = results['token']
+    all_groups = results['all_groups']
+    all_samples = results['all_samples']
+    intensities_df = results['intensities_df']
+    dataset_pathways_to_row_ids = results['dataset_pathways_to_row_ids']
+    dataset_row_id_to_unique_ids = results['dataset_row_id_to_unique_ids']
+
     # write header -- pathway ranking
     st.header('Pathway Ranking')
     st.write(' The following table shows a ranking of pathways based on their activity levels. Entries in the table can'
@@ -211,7 +254,8 @@ def show_pathway_results(df, use_reactome, token):
     # filter by formula hits
     min_hits = 1
     max_hits = max(df['Formula Hits'])
-    formula_threshold = st.slider('Filter pathways having formula hits at least', min_value=min_hits, max_value=max_hits,
+    formula_threshold = st.slider('Filter pathways having formula hits at least', min_value=min_hits,
+                                  max_value=max_hits,
                                   value=2, step=1)
     df = df[df['Formula Hits'] >= formula_threshold]
 
@@ -237,66 +281,19 @@ def show_pathway_results(df, use_reactome, token):
         stId = tokens[1].strip()
         stId = stId[:-1]  # remove last ')' character from stId
 
+        # draw pathway diagram for either reactome or KEGG
         if use_reactome:
             status_code, json_response = get_reactome_info(stId)
             if status_code == 200:
-                # logger.debug(json_response)
-
-                # st.subheader(pw)
-                label = '%s: %s' % (stId, pw_name)
-                info_url = 'https://reactome.org/content/detail/%s' % stId
-                header_markdown = '### %s [[info]](%s)' % (label, info_url)
-                if token is not None:
-                    viewer_url = 'https://reactome.org/PathwayBrowser/#/%s&DTAB=AN&ANALYSIS=%s' % (stId, token)
-                    header_markdown += ' [[viewer]](%s)' % viewer_url
-                st.write(header_markdown)
-
-                row = df.loc[stId]
-                st.write(row)
-                for summation in json_response['summation']:
-                    summary = summation['text']
-                    st.write(summary)
-
-                image_url = 'https://reactome.org/ContentService/exporter/diagram/%s.png?quality=8' \
-                            '&diagramProfile=standard&analysisProfile=strosobar' % stId
-                if token is not None:
-                    image_url += '&token=%s&resource=TOTAL&expColumn=0' % token
-                logger.debug('image_url = %s' % image_url)
-                st.image(image_url, use_column_width=True)
-
-                # print reactions
-                # for event in json_response['hasEvent']:
-                #     name = event['name'][0]
-                #     species = event['speciesName']
-                #     event_str = '- %s (%s)' % (name, species)
-                #     st.write(event_str)
+                show_reactome_diagram(df, json_response, pw_name, stId, token)
 
         else:  # if not reactome, assume it's KEGG
+            show_kegg_diagram(df, pw_name, stId)
 
-            # st.subheader(pw)
-            label = '%s: %s' % (stId, pw_name)
-            info_url = 'https://www.genome.jp/dbget-bin/www_bget?%s' % stId
-            header_markdown = '### %s [[info]](%s)' % (label, info_url)
-            st.write(header_markdown)
-
-            row = df.loc[stId]
-            p_value = row['p-value']
-            num_hits = row['Formula Hits']
-            subsubheader = '#### p-value: %.6f' % p_value
-            st.write(subsubheader)
-            subsubheader = '#### Formula Hits: %d' % (num_hits)
-            st.write(subsubheader)
-
-            st.write('#### Summary:')
-            dict_data = get_kegg_info(stId)
-            for k, v in dict_data.items():
-                # if k in ['CLASS', 'MODULE', 'DISEASE', 'REL_PATHWAY']:
-                if k in ['CLASS']:
-                    st.write(k, ': ', v)
-
-            image_url = 'https://www.genome.jp/kegg/pathway/map/%s.png' % stId
-            logger.debug('image_url = %s' % image_url)
-            st.image(image_url, use_column_width=True)
+        # for both cases, show the heatmap too
+        if verbose_output:
+            members = dataset_pathways_to_row_ids[stId]
+            plot_heatmap(all_groups, all_samples, intensities_df, members, dataset_row_id_to_unique_ids)
 
 
 @st.cache
@@ -393,9 +390,96 @@ def parse_reactome_json(json_response):
     return pathways_df, reactome_url, token
 
 
+def show_kegg_diagram(df, pw_name, stId):
+    # st.subheader(pw)
+    label = '%s: %s' % (stId, pw_name)
+    info_url = 'https://www.genome.jp/dbget-bin/www_bget?%s' % stId
+    header_markdown = '### %s [[info]](%s)' % (label, info_url)
+    st.write(header_markdown)
+
+    row = df.loc[stId]
+    p_value = row['p-value']
+    num_hits = row['Formula Hits']
+    subsubheader = '#### p-value: %.6f' % p_value
+    st.write(subsubheader)
+
+    subsubheader = '#### Formula Hits: %d' % (num_hits)
+    st.write(subsubheader)
+
+    st.write('#### Summary:')
+    dict_data = get_kegg_info(stId)
+    for k, v in dict_data.items():
+        # if k in ['CLASS', 'MODULE', 'DISEASE', 'REL_PATHWAY']:
+        if k in ['CLASS']:
+            st.write(k, ': ', v)
+
+    image_url = 'https://www.genome.jp/kegg/pathway/map/%s.png' % stId
+    logger.debug('image_url = %s' % image_url)
+    st.image(image_url, use_column_width=True)
+
+
 @st.cache
 def get_kegg_info(stId):
     k = KEGG()
     data = k.get(stId)
     dict_data = k.parse(data)
     return dict_data
+
+
+def show_reactome_diagram(df, json_response, pw_name, stId, token):
+    # st.subheader(pw)
+    label = '%s: %s' % (stId, pw_name)
+    info_url = 'https://reactome.org/content/detail/%s' % stId
+    header_markdown = '### %s [[info]](%s)' % (label, info_url)
+    if token is not None:
+        viewer_url = 'https://reactome.org/PathwayBrowser/#/%s&DTAB=AN&ANALYSIS=%s' % (stId, token)
+        header_markdown += ' [[viewer]](%s)' % viewer_url
+    st.write(header_markdown)
+
+    row = df.loc[stId]
+    st.write(row)
+    for summation in json_response['summation']:
+        summary = summation['text']
+        st.write(summary)
+
+    image_url = 'https://reactome.org/ContentService/exporter/diagram/%s.png?quality=8' \
+                '&diagramProfile=standard&analysisProfile=strosobar' % stId
+    if token is not None:
+        image_url += '&token=%s&resource=TOTAL&expColumn=0' % token
+    logger.debug('image_url = %s' % image_url)
+    st.image(image_url, use_column_width=True)
+
+
+def plot_heatmap(all_groups, all_samples, intensities_df, members, dataset_row_id_to_unique_ids):
+    # Create a categorical palette to identify the networks
+    used_groups = list(set(all_groups))
+    group_pal = sns.husl_palette(len(used_groups), s=.90)
+    group_lut = dict(zip(map(str, used_groups), group_pal))
+
+    # Convert the palette to vectors that will be drawn on the side of the matrix
+    group_intensities = intensities_df.loc[members][all_samples]
+    group_colours = pd.Series(all_groups, index=group_intensities.columns).map(group_lut)
+    group_colours.name = 'groups'
+
+    # plot heatmap
+    g = sns.clustermap(group_intensities, center=0, cmap='vlag', col_colors=group_colours,
+                       col_cluster=False, linewidths=0.75, cbar_pos=(0.1, 0.05, 0.05, 0.18))
+    plt.suptitle('Formula Hits in Pathways', y=0.85)
+
+    # draw group legend
+    for group in used_groups:
+        g.ax_col_dendrogram.bar(0, 0, color=group_lut[group], label=group, linewidth=0)
+    g.ax_col_dendrogram.legend(loc="right")
+
+    plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0)
+
+    # render plot
+    st.pyplot()
+
+    data = []
+    for idx in members:
+        formula = ','.join(dataset_row_id_to_unique_ids[idx])
+        row = [idx, formula]
+        data.append(row)
+    data_df = pd.DataFrame(data, columns=['Row Index', 'Formula Annotations'])
+    st.write(data_df)
