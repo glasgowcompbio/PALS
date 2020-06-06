@@ -5,19 +5,20 @@
 Pathway analysis is an important task in understanding complex metabolomic data. Here we introduce **PALS (Pathway 
 Activity Level Scoring)**, a complete tool that performs database queries of pathways, decomposes activity levels in pathways via [the PLAGE method](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225), as well as presents the results in a user-friendly manner. The results are found to be more robust to noise and missing peaks compared to the alternatives (ORA, GSEA). This is particularly important for metabolomics peak data, where noise and missing peaks are prevalent.
 
-![PALS](images/overall_schematic.png?raw=true "PALS")
+![PALS](https://github.com/glasgowcompbio/PALS/raw/master/images/overall_schematic.png "PALS")
 
 Additionally, the [PLAGE decomposition approach](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225) 
 used in PALS is amenable PALS to analysis of any group of metabolite sets, not just pathways. As demonstrated in PALS Viewer,
 metabolite sets obtained from the grouping of metabolites according to their fragmentation spectra can also be analysed. 
 This includes in particular *Molecular Families* from [GNPS](http://gnps.ucsd.edu/), as well as *Mass2Motifs* from [MS2LDA](http://ms2lda.org/).
+For more details on how to analyse user-defined metabolite sets, see Section 8.
 
 ### 2. Installation
 
 For the latest development version, check out this repository using Git.
 Otherwise PALS can also be installed via `pip install PALS-pathway`.
 
-To use Reactome as pathway database, refer to the [setup guide](setup_guide.md).
+To use Reactome as pathway database, refer to the [setup guide](https://github.com/glasgowcompbio/PALS/blob/master/setup_guide.md).
 
 ### 3. Running PALS
 
@@ -187,10 +188,10 @@ line of grouping information omitted). Similarly `annot_df` is the annotation da
 also described above. 
 
 Example `int_df` dataframe:
-![int_df](images/int_df.png?raw=true "int_df")
+![int_df](https://github.com/glasgowcompbio/PALS/raw/master/images/int_df.png "int_df")
 
 Example `annot_df` dataframe:
-<img src="images/annot_df.png?raw=true" width="200">
+<img src="https://github.com/glasgowcompbio/PALS/raw/master/images/annot_df.png" width="200">
 
 The experimental design data in `experimental_design` contains information on **groups**, which relates all samples in 
 a particular experimental factor together as well as **comparisons**, which describes the desired comparisons for the 
@@ -227,3 +228,10 @@ experimental_design = {
 ```
 Many example notebooks are provided in the [notebooks](https://github.com/glasgowcompbio/PALS/tree/master/notebooks) folders.
 If you have any question in using PALS in your application, please raise an issue or simply email us.'
+
+### 8. Analysis of User-defined Metabolite Sets
+
+PALS can be used to analyse any user-defined group of metabolites. In the paper, we demonstrated this through an example
+by analysing potentially unknown metabolites that have been grouped into Molecular Families (by GNPS) and into
+Mass2Motifs (by MS2LDA). [The following notebook](https://github.com/glasgowcompbio/PALS/blob/master/notebooks/GNPS_analysis.ipynb) demonstrates how the analysis was done.
+Additionally Molecular Families and Mass2Motifs analysis have also been included as an option in PALS Viewer.
