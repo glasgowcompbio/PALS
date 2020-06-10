@@ -7,10 +7,10 @@ Activity Level Scoring)**, a complete tool that performs database queries of pat
 
 ![PALS](https://github.com/glasgowcompbio/PALS/raw/master/images/overall_schematic.png "PALS")
 
-Additionally, the [PLAGE decomposition approach](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225) 
-used in PALS is amenable PALS to analysis of any group of metabolite sets, not just pathways. As demonstrated in PALS Viewer,
+Additionally, the [decomposition approach](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-6-225) 
+in PALS is amenable to the analysis of any group of metabolite sets, not just pathways. As demonstrated in PALS Viewer,
 metabolite sets obtained from the grouping of metabolites according to their fragmentation spectra can also be analysed. 
-This includes in particular *Molecular Families* from [GNPS](http://gnps.ucsd.edu/), as well as *Mass2Motifs* from [MS2LDA](http://ms2lda.org/). From [PALS Viewer](https://pals.glasgowcompbio.org/app/), you can also prioritise MF and Mass2Motifs from your GNPS analysis based on their activity levels. For more details, including how to analyse user-defined metabolite sets from Jupyter notebooks, see Section 8.
+This includes in particular *Molecular Families* from [GNPS](http://gnps.ucsd.edu/), as well as *Mass2Motifs* from [MS2LDA](http://ms2lda.org/). From [PALS Viewer](https://pals.glasgowcompbio.org/app/), you can also prioritise MF and Mass2Motifs from your GNPS analysis based on their activity levels. For more details including how to analyse user-defined metabolite sets from Jupyter notebooks, see Section 8.
 
 ### 2. Installation
 
