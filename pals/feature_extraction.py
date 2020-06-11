@@ -7,14 +7,14 @@ from sklearn import preprocessing
 
 from .loader import PiMP_KEGG_Loader, CompoundOnlineLoader, CompoundOfflineLoader, UniProtLoader, EnsemblLoader
 from .common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
-    DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE, MIN_HITS
+    DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE, MIN_HITS, SMALL
 
 
 class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
                  reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None,
-                 min_replace=MIN_REPLACE, min_hits=MIN_HITS):
+                 min_replace=SMALL, min_hits=MIN_HITS):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name

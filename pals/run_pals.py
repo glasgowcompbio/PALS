@@ -41,7 +41,7 @@ def build_parser():
     parser.add_argument('--comparisons', required=True, type=pair, nargs='+')
 
     # common parameters
-    parser.add_argument('--min_replace', type=float, default=MIN_REPLACE,
+    parser.add_argument('--min_replace', type=float, default=SMALL,
                         help='Minimum intensity of MS1 peaks for data imputation  (default: %(default)s)')
     parser.add_argument('--min_hits', type=float, default=MIN_HITS,
                         help='Minimum number of hits to keep pathways in the results (default: %(default)s)')
