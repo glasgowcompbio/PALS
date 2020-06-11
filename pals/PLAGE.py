@@ -11,7 +11,7 @@ from scipy.stats import genextreme
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 
-from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, Method
+from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, Method, post_filter_df_by_min_hits
 
 
 class PLAGE(Method):
@@ -254,7 +254,10 @@ class PLAGE(Method):
         comb_p_df.columns = column_names
         pathway_df_final = pd.merge(pathway_df_merge, comb_p_df[column_names], left_index=True, right_index=True,
                                     how='outer')
-        return pathway_df_final
+
+        # post-processing to filter pathway dataframe by the minimum number of hits
+        pathway_df = post_filter_df_by_min_hits(pathway_df_final, self.data_source.min_hits)
+        return pathway_df
 
     ####################################################################################################################
     # private methods

@@ -8,7 +8,7 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
-from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, Method
+from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, Method, post_filter_df_by_min_hits
 
 
 class ORA(Method):
@@ -147,6 +147,8 @@ class ORA(Method):
         # del pathway_df.index.name
         pathway_df.rename_axis(None, inplace=True)
 
+        # post-processing to filter pathway dataframe by the minimum number of hits
+        pathway_df = post_filter_df_by_min_hits(pathway_df, self.data_source.min_hits)
         return pathway_df
 
     ####################################################################################################################

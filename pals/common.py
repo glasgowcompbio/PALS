@@ -9,11 +9,13 @@ import sys
 from collections import defaultdict
 from io import StringIO
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 
 PW_F_OFFSET = 1
 MIN_REPLACE = 5000
+MIN_HITS = 0
 NUM_RESAMPLES = 1000
 PLAGE_WEIGHT = 1
 HG_WEIGHT = 0  # TODO: remove this?
@@ -220,3 +222,17 @@ def get_table_download_link(df):
         csv.encode()
     ).decode()  # some strings <-> bytes conversions necessary here
     return f'<a href="data:file/csv;base64,{b64}" download="results.csv">Download csv file</a>'
+
+
+def post_filter_df_by_min_hits(pathway_df, min_hits):
+    """
+    Filter the 'tot_ds_F' column of a pathway dataframe. If it's less than min_hits, then set all the p-values to NaN.
+    :param pathway_df: a pathway dataframe returned by a pathway ranking method in PALS
+    :param min_hits: the minimum number of hits in this pathway
+    :return: a filtered pathway dataframe
+    """
+    pathway_df = pathway_df.copy()
+    rows_to_remove = pathway_df[pathway_df['tot_ds_F'] < min_hits]
+    columns_to_remove = [col for col in rows_to_remove.columns.values if 'p-value' in col or 'comb_p' in col]
+    pathway_df.loc[rows_to_remove.index, columns_to_remove] = np.nan
+    return pathway_df

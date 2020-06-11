@@ -43,6 +43,8 @@ def build_parser():
     # common parameters
     parser.add_argument('--min_replace', type=float, default=MIN_REPLACE,
                         help='Minimum intensity of MS1 peaks for data imputation  (default: %(default)s)')
+    parser.add_argument('--min_hits', type=float, default=MIN_HITS,
+                        help='Minimum number of hits to keep pathways in the results (default: %(default)s)')
 
     # reactome parameters
     parser.add_argument('--species', default=REACTOME_SPECIES_HOMO_SAPIENS, help='Species name',
@@ -99,6 +101,7 @@ def main():
     # extract other args
     database_name = args['db']
     min_replace = args['min_replace']
+    min_hits = args['min_hits']
     reactome_species = args['species']
     reactome_metabolic_pathway_only = not args['use_all_reactome_pathways']
     reactome_query = args['connect_to_reactome_server']
@@ -107,7 +110,7 @@ def main():
     ds = DataSource(int_df, annotation_df, experimental_design, database_name,
                     reactome_species=reactome_species,
                     reactome_metabolic_pathway_only=reactome_metabolic_pathway_only,
-                    reactome_query=reactome_query, min_replace=min_replace)
+                    reactome_query=reactome_query, min_replace=min_replace, min_hits=min_hits)
 
     # run the selected pathway analysis method
     method = None

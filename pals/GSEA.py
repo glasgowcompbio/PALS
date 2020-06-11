@@ -5,7 +5,7 @@ import pandas as pd
 from gseapy.gsea import GSEA
 from loguru import logger
 
-from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, Method
+from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, Method, post_filter_df_by_min_hits
 
 
 class MSEA(GSEA):
@@ -162,4 +162,6 @@ class GSEA(Method):
         # del pathway_df.index.name
         pathway_df.rename_axis(None, inplace=True)
 
+        # post-processing to filter pathway dataframe by the minimum number of hits
+        pathway_df = post_filter_df_by_min_hits(pathway_df, self.data_source.min_hits)
         return pathway_df
