@@ -199,8 +199,16 @@ def show_gnps_results(df, results):
                                   value=min_threshold, step=1)
     df = df[df['No. of members'] >= formula_threshold]
 
-    st.markdown(get_table_download_link(df), unsafe_allow_html=True)
     st.write(df.style.format({'p-value': '{:.6e}'}))
+
+    # show a download link for the ranking
+    out = get_table_download_link(df, 'components_ranking.csv', 'Download ranking results')
+    st.markdown(out, unsafe_allow_html=True)
+
+    # show a download link for component summary
+    summary_df = get_summary_df(dataset_pathways_to_row_ids, df, entity_dict, results)
+    out = get_table_download_link(summary_df, 'components_summary.csv', 'Download component summary')
+    st.markdown(out, unsafe_allow_html=True)
 
     # write header -- pathway info
     st.header('Component Browser')
@@ -227,18 +235,49 @@ def show_gnps_results(df, results):
     st.write(row)
 
     # write the link to MotifDB if available
-    if 'motifdb_urls' in results:
-        component = row['Components']
-        motifdb_url = results['motifdb_urls'][component]
-        try:
-            float(motifdb_url) # will throw ValueError if it actually contains a string, otherwise it's a nan
-        except ValueError:
-            st.write('Link to MotifDB: %s' % motifdb_url)
+    motifdb_link = get_motifdb_link(results, row)
+    if motifdb_link is not None:
+        st.write('Link to MotifDB: %s' % motifdb_link)
 
     members = dataset_pathways_to_row_ids[idx]
     member_df = get_member_df(entity_dict, members)
     plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, row)
     display_member_df(member_df)
+
+
+def get_summary_df(dataset_pathways_to_row_ids, df, entity_dict, results):
+    data = []
+    for idx, row in df.iterrows():
+        row1 = row.copy()
+
+        # add motifdb link as a column if it's an MS2LDA results
+        motifdb_link = get_motifdb_link(results, row1)
+        if motifdb_link is not None:
+            row1['motifdb'] = motifdb_link
+
+        # get member info
+        members = dataset_pathways_to_row_ids[idx]
+        member_df = get_member_df(entity_dict, members)
+
+        # combine both results together
+        for idx2, row2 in member_df.iterrows():
+            combined_row = row1.append(row2)
+            data.append(combined_row)
+    summary_df = pd.concat(data, axis=1).T
+    logger.debug(summary_df)
+    return summary_df
+
+
+def get_motifdb_link(results, row):
+    component = row['Components']
+    motifdb_link = None
+    if 'motifdb_urls' in results:
+        motifdb_url = results['motifdb_urls'][component]
+        try:
+            float(motifdb_url)  # will throw ValueError if it actually contains a string, otherwise it's a nan
+        except ValueError:
+            motifdb_link = motifdb_url
+    return motifdb_link
 
 
 def get_member_df(entity_dict, members):
@@ -282,6 +321,7 @@ def display_member_df(member_df):
         st.write(member_df.to_html(escape=False), unsafe_allow_html=True)
     else:
         st.write(member_df)
+
 
 def plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, row):
     # Create a categorical palette to identify the networks

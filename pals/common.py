@@ -212,7 +212,7 @@ class Method(object):
 
 
 # https://discuss.streamlit.io/t/how-to-set-file-download-function/2141
-def get_table_download_link(df):
+def get_table_download_link(df, out_file, label):
     """Generates a link allowing the data in a given panda dataframe to be downloaded
     in:  dataframe
     out: href string
@@ -221,7 +221,8 @@ def get_table_download_link(df):
     b64 = base64.b64encode(
         csv.encode()
     ).decode()  # some strings <-> bytes conversions necessary here
-    return f'<a href="data:file/csv;base64,{b64}" download="results.csv">Download csv file</a>'
+    out = f'<a href="data:file/csv;base64,{b64}" download="%s">%s</a>' % (out_file, label)
+    return out
 
 
 def post_filter_df_by_min_hits(pathway_df, min_hits):

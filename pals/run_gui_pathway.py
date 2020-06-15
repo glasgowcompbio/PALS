@@ -259,8 +259,9 @@ def show_pathway_results(df, use_reactome, results, verbose_output):
                                   value=2, step=1)
     df = df[df['Formula Hits'] >= formula_threshold]
 
-    st.markdown(get_table_download_link(df), unsafe_allow_html=True)
     st.write(df.style.format({'p-value': '{:.6e}'}))
+    out = get_table_download_link(df, 'pathways_ranking.csv', 'Download ranking results')
+    st.markdown(out, unsafe_allow_html=True)
 
     # write header -- pathway info
     st.header('Pathway Browser')
