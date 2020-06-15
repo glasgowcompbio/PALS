@@ -3,6 +3,7 @@ import zipfile
 from collections import defaultdict, Counter
 from io import BytesIO
 
+import numpy as np
 import pandas as pd
 import requests
 from loguru import logger
@@ -186,6 +187,14 @@ class GNPSLoader(Loader):
 
         # filter dataframes
         # assume metadata_df has two columns: 'sample' and 'group'
+
+        # check that the metadata sample names provided by users match the column names in measurement df
+        num_matching_samples = np.sum(self.metadata_df['sample'].isin(measurement_df.columns.values))
+        assert num_matching_samples > 0, 'None of the sample names in the metadata %s matches the columns names in ' \
+                                         'the measurements %s. Please check the names again.' % (
+                                             self.metadata_df['sample'].values,
+                                             measurement_df.columns.values)
+
         # remove rows with sample id that can't be found in the columns of int_df
         metadata_df = self.metadata_df[self.metadata_df['sample'].isin(measurement_df.columns.values)]
         # keep only columns in int_df that have group information
