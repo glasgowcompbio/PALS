@@ -234,3 +234,12 @@ PALS can be used to analyse any user-defined group of metabolites. In the paper,
 by analysing potentially unknown metabolites that have been grouped into Molecular Families (by GNPS) and into
 Mass2Motifs (by MS2LDA). [The following notebook](https://github.com/glasgowcompbio/PALS/blob/master/notebooks/GNPS_analysis.ipynb) demonstrates how the analysis was done.
 Additionally Molecular Families and Mass2Motifs analysis have also been included as an option in PALS Viewer.
+
+### 9. Publication
+
+If you're using PALS, please cite the following publication.
+
+**Pre-print:**
+
+Mcluskey, K., Wandy, J., Vincent, I., Hooft, J. J. J. Van Der, Rogers, S., & Burgess, K. (2020). *Decomposing metabolite set activity levels with PALS.* Lc, 1–12.
+[https://www.biorxiv.org/content/10.1101/2020.06.07.138974v1](https://www.biorxiv.org/content/10.1101/2020.06.07.138974v1).
