@@ -74,9 +74,14 @@ def main():
             significant_column = '%s/%s p-value' % (params['case'], params['control'])
 
             # run PLAGE on the GNPS data
-            results = run_analysis(params)
-            df = process_gnps_results(results['df'], significant_column)
-            show_gnps_results(df, results)
+            try:
+                results = run_analysis(params)
+                df = process_gnps_results(results['df'], significant_column)
+                show_gnps_results(df, results)
+            except KeyError as e:
+                # usually this is because a group does not have any samples in the measurement df, e.g. blanks and QCs
+                st.warning('No measurements found for the group "%s" in the peak table. '
+                           'Please select another group.' % e.args[0])
         else:
             write_main_text(analysis_type)
 
