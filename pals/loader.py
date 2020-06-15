@@ -404,17 +404,38 @@ class GNPSLoader(Loader):
         clustering_df = None
         quantification_df = None
         with zipfile.ZipFile(input_stream) as z:
-            for filename in z.namelist():
-                # read clustering information
+            # find the right files containing the clustering info and quantification table
+            clusterinfo_filename = None
+            quantification_filename = None
+
+            # we sort z.namelist() to make sure files appear alphabetically
+            # It seems that depending on the format, there could be 1 or 2 quantification tables in the zip file
+            # If there is only one, then it is quantification_table/quantification_table-00000.txt
+            # Otherwise they are:
+            # - quantification_table/quantification_table-00000.txt
+            # - quantification_table_reformatted/xxx.csv
+            # In this case, the reformatted one is what we want, so sorting the namelist and looping over them
+            # will get the second (correct) one.
+            for filename in sorted(z.namelist()):
+                logger.debug('\t%s' % filename)
+
                 if filename.startswith('clusterinfo_summary'):
-                    logger.debug('Found cluster info: %s' % filename)
-                    clustering_df = pd.read_csv(z.open(filename), sep='\t', index_col='cluster index')
+                    clusterinfo_filename = filename
+                    logger.debug('Found cluster info: %s' % clusterinfo_filename)
 
-                # read quantification information
                 if filename.startswith('quantification_table'):
-                    logger.debug('Found quantification table: %s' % filename)
-                    quantification_df = pd.read_csv(z.open(filename), sep=',').set_index('row ID')
+                    quantification_filename = filename
+                    logger.debug('Found quantification table: %s' % quantification_filename)
 
+            assert clusterinfo_filename is not None
+            assert quantification_filename is not None
+
+            # read clustering and quantification information
+            logger.debug('Loading clusterinfo %s' % clusterinfo_filename)
+            clustering_df = pd.read_csv(z.open(clusterinfo_filename), sep='\t', index_col='cluster index')
+
+            logger.debug('Loading quantification table %s' % quantification_filename)
+            quantification_df = pd.read_csv(z.open(quantification_filename), sep=',').set_index('row ID')
         return clustering_df, quantification_df
 
     def _parse_ms2lda_motifs(self, input_stream):
