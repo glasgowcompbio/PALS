@@ -1,4 +1,5 @@
 import copy
+import random
 import timeit
 import warnings
 from random import shuffle
@@ -17,7 +18,7 @@ from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, 
 class PLAGE(Method):
 
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT,
-                 case=None, control=None):
+                 case=None, control=None, seed=None):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
@@ -26,6 +27,11 @@ class PLAGE(Method):
         :param plage_weight: the weight for PLAGE (intensity) component when combining p-values
         :param hg_weight: the weight for hypergeometric component when combining p-values
         """
+        if seed is None:
+            random.seed()
+        else:
+            random.seed(seed)
+
         self.data_source = copy.deepcopy(data_source)
         self.num_resamples = num_resamples
 
