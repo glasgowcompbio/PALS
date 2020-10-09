@@ -35,11 +35,10 @@ except Exception as e:
 
 
 def get_neo4j_session():
-    session = None
     try:
         session = driver.session()
     except Exception:
-        raise
+        session = None
     return session
 
 
