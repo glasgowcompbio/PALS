@@ -283,7 +283,12 @@ class PLAGE(Method):
         for pw in pathways:
             row_ids = self.data_source.dataset_pathways_to_row_ids[pw]
             pathway_data = measurement_df.loc[row_ids]  # DF selected from peak IDs.
-            w, d, c = np.linalg.svd(np.array(pathway_data))
+            try:
+                w, d, c = np.linalg.svd(np.array(pathway_data))
+            except np.linalg.LinAlgError:
+                # if it failed the first time, try again, it might magically work the second time
+                # see https://stackoverflow.com/questions/63761366/numpy-linalg-linalgerror-svd-did-not-converge-in-linear-least-squares-on-first
+                w, d, c = np.linalg.svd(np.array(pathway_data))
 
             pw_name = self.data_source.pathway_dict[pw]['display_name']
             pw_act_list = []
