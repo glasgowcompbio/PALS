@@ -151,9 +151,11 @@ def load_data(intensity_csv, annotation_csv, gui=False):
     # set the first column (peak ids) in csv to be the index
 
     if gui:  # load data for GUI (Streamlit)
-        lines = [line for line in intensity_csv]
-        filtered_lines = [line for idx, line in enumerate(lines) if idx != 1]
+        lines = uploadedFileToStrings(intensity_csv) # turn to list of strings
+        filtered_lines = [line for idx, line in enumerate(lines) if idx != 1] # remove second (grouping) line
         intensities = StringIO('\n'.join(filtered_lines))
+
+        # load to pandas dataframe (without the second line)
         int_df = pd.read_csv(intensities, skiprows=[1], index_col=0)
         groups = _parse_groups(lines)
         logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
@@ -166,10 +168,19 @@ def load_data(intensity_csv, annotation_csv, gui=False):
         logger.debug('Loaded groups: %s' % groups)
 
     # load annotation dataframe from csv, setting the first column to be the index
-    annotation_df = pd.read_csv(annotation_csv, index_col=0)
+    lines = uploadedFileToStrings(annotation_csv)
+    annotations = StringIO('\n'.join(lines))
+    annotation_df = pd.read_csv(annotations, index_col=0)
     logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
 
     return int_df, annotation_df, groups
+
+
+def uploadedFileToStrings(intensity_csv):
+    bytesData = intensity_csv.getvalue()
+    stringio = StringIO(str(bytesData, 'utf-8'))
+    lines = stringio.readlines()
+    return lines
 
 
 def get_groups(csv_file):
