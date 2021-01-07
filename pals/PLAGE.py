@@ -10,8 +10,10 @@ from scipy.stats import genextreme
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 
-from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation, ZScoreNormalisation
-from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, Method, post_filter_df_by_min_hits
+from .base import Method
+from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, post_filter_df_by_min_hits
+from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation, ZScoreNormalisation, \
+    ZeroAndNegativeReplace
 
 
 class PLAGE(Method):
@@ -38,10 +40,11 @@ class PLAGE(Method):
         self.case = case
         self.control = control
 
-    def _create_preprocessors(self):
+    def _create_default_preprocessors(self):
         groups = self.data_source.groups
         min_replace = self.data_source.min_replace
         preprocessors = [
+            ZeroAndNegativeReplace(),
             MinValueImputation(groups, min_replace),
             RowAverageImputation(groups),
             LogNormalisation(),

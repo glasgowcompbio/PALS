@@ -1,15 +1,14 @@
-import copy
 import warnings
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
-from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation
-from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, Method, post_filter_df_by_min_hits
+from .base import Method
+from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, post_filter_df_by_min_hits
+from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation, ZeroAndNegativeReplace
 
 
 class ORA(Method):
@@ -24,10 +23,11 @@ class ORA(Method):
         self.case = case
         self.control = control
 
-    def _create_preprocessors(self):
+    def _create_default_preprocessors(self):
         groups = self.data_source.groups
         min_replace = self.data_source.min_replace
         preprocessors = [
+            ZeroAndNegativeReplace(),
             MinValueImputation(groups, min_replace),
             RowAverageImputation(groups),
             LogNormalisation(),

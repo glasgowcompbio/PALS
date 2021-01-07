@@ -3,8 +3,9 @@ import pandas as pd
 from gseapy.gsea import GSEA
 from loguru import logger
 
-from .preprocessing import MinValueImputation, RowAverageImputation
-from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, Method, post_filter_df_by_min_hits
+from .base import Method
+from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, post_filter_df_by_min_hits
+from .preprocessing import MinValueImputation, RowAverageImputation, ZeroAndNegativeReplace
 
 
 class MSEA(GSEA):
@@ -42,10 +43,11 @@ class GSEA(Method):
         self.case = case
         self.control = control
 
-    def _create_preprocessors(self):
+    def _create_default_preprocessors(self):
         groups = self.data_source.groups
         min_replace = self.data_source.min_replace
         preprocessors = [
+            ZeroAndNegativeReplace(),
             MinValueImputation(groups, min_replace),
             RowAverageImputation(groups),
         ]
