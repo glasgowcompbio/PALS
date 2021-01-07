@@ -1,5 +1,3 @@
-import copy
-import random
 import timeit
 import warnings
 from random import shuffle
@@ -12,13 +10,14 @@ from scipy.stats import genextreme
 from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 
+from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation, ZScoreNormalisation
 from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, Method, post_filter_df_by_min_hits
 
 
 class PLAGE(Method):
 
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT,
-                 case=None, control=None, seed=None):
+                 case=None, control=None, seed=None, preprocessors=None):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
@@ -27,12 +26,8 @@ class PLAGE(Method):
         :param plage_weight: the weight for PLAGE (intensity) component when combining p-values
         :param hg_weight: the weight for hypergeometric component when combining p-values
         """
-        if seed is None:
-            random.seed()
-        else:
-            random.seed(seed)
-
-        self.data_source = copy.deepcopy(data_source)
+        logger.debug('PLAGE initialised')
+        super().__init__(data_source, seed=seed, preprocessors=preprocessors)
         self.num_resamples = num_resamples
 
         # Add one to the expected number of pathway formulas for sf calculations - 100% gives a zero sf value and
@@ -43,18 +38,29 @@ class PLAGE(Method):
         self.case = case
         self.control = control
 
+    def _create_preprocessors(self):
+        groups = self.data_source.groups
+        min_replace = self.data_source.min_replace
+        preprocessors = [
+            MinValueImputation(groups, min_replace),
+            RowAverageImputation(groups),
+            LogNormalisation(),
+            ZScoreNormalisation()
+        ]
+        return preprocessors
+
     ####################################################################################################################
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, resample=True, standardize=True, streamlit_pbar=None):
+    def get_results(self, resample=True, preprocess=True, streamlit_pbar=None):
         """
         Main method to perform pathway analysis
         :param resample: whether to perform resampling
-        :param standardize: whether to standardize data
+        :param preprocess: whether to preprocess data
         :return: a dataframe containing pathway analysis results from PALS
         """
-        activity_df = self.get_plage_activity_df(standardize)
+        activity_df = self.get_plage_activity_df(preprocess)
         if resample:
             with warnings.catch_warnings():
                 # FIXME: not sure if this is the best thing to do
@@ -65,26 +71,14 @@ class PLAGE(Method):
         pathway_df = self.calculate_hg_values(plage_df)
         return pathway_df
 
-    def get_plage_activity_df(self, standardize=True):
+    def get_plage_activity_df(self, preprocess):
         """
         Performs data normalisation and computes the PLAGE activity dataframe
         :return: PLAGE activity dataframe
         """
-        if standardize:
-            # https://stackoverflow.com/questions/15933741/how-do-i-catch-a-numpy-warning-like-its-an-exception-not-just-for-testing
-            with warnings.catch_warnings():
-                warnings.filterwarnings('error')
-                try:
-                    measurement_df = self.data_source.standardize_intensity_df()
-                except UserWarning as e:
-                    # raise the exception if we encounter:
-                    # "UserWarning: Numerical issues were encountered when scaling the data and might not be solved.
-                    # The standard deviation of the data is probably very close to 0."
-                    raise (e)
-        else:
-            measurement_df = self.data_source.get_measurements()
+        measurement_df = self._get_measurement_df(preprocess)
 
-        # Standardizing, testing data
+        # Check if data has been standardised correctly as a requirement to SVD
         mean = np.round(measurement_df.values.mean(axis=1))
         variance = np.round(measurement_df.values.std(axis=1))
         logger.debug("Mean values of the rows in the DF is %s" % str(mean))

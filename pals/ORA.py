@@ -8,38 +8,44 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 from statsmodels.sandbox.stats.multicomp import multipletests
 
+from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation
 from .common import SIGNIFICANT_THRESHOLD, is_comparison_used, Method, post_filter_df_by_min_hits
 
 
 class ORA(Method):
 
-    def __init__(self, data_source, case=None, control=None):
+    def __init__(self, data_source, case=None, control=None, preprocessors=None):
         """
         Creates a ORA analysis
         :param data_source: a DataSource object
         """
-        self.data_source = copy.deepcopy(data_source)
+        logger.debug('ORA initialised')
+        super().__init__(data_source, preprocessors=preprocessors)
         self.case = case
         self.control = control
+
+    def _create_preprocessors(self):
+        groups = self.data_source.groups
+        min_replace = self.data_source.min_replace
+        preprocessors = [
+            MinValueImputation(groups, min_replace),
+            RowAverageImputation(groups),
+            LogNormalisation(),
+        ]
+        return preprocessors
 
     ####################################################################################################################
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self, correct_multiple_tests=True, standardize=True):
+    def get_results(self, correct_multiple_tests=True, preprocess=True):
         """
         Main method to perform over-representation (ORA) analysis
         :param: whether to log the initial data
         :return: a dataframe containing pathway analysis results from ORA
         """
         logger.debug('Calculating ORA')
-        measurement_df = self.data_source.change_zero_peak_ints()
-        if standardize:
-            scaled_data = np.log(np.array(measurement_df))
-
-            # Put the scaled data back into df for further use
-            sample_names = measurement_df.columns
-            measurement_df[sample_names] = scaled_data
+        measurement_df = self._get_measurement_df(preprocess)
 
         # For all of the pathways get all of the peak IDs
         assert len(self.data_source.dataset_pathways) > 0, 'No pathways found in the dataset'

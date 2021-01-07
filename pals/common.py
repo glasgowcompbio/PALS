@@ -1,10 +1,12 @@
 import base64
+import copy
 import gzip
 import json
 import logging
 import os
 import pathlib
 import pickle
+import random
 import sys
 from collections import defaultdict
 from io import StringIO
@@ -60,6 +62,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
 GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS = 'GNPS Molecular Family Analysis'
 GUI_GNPS_MS2LDA_ANALYSIS = 'GNPS-MS2LDA Analysis'
+
 
 def load_json(json_file, compressed=False):
     if compressed:
@@ -151,8 +154,8 @@ def load_data(intensity_csv, annotation_csv, gui=False):
     # set the first column (peak ids) in csv to be the index
 
     if gui:  # load data for GUI (Streamlit)
-        lines = uploadedFileToStrings(intensity_csv) # turn to list of strings
-        filtered_lines = [line for idx, line in enumerate(lines) if idx != 1] # remove second (grouping) line
+        lines = uploaded_file_to_strings(intensity_csv)  # turn to list of strings
+        filtered_lines = [line for idx, line in enumerate(lines) if idx != 1]  # remove second (grouping) line
         intensities = StringIO('\n'.join(filtered_lines))
 
         # load to pandas dataframe (without the second line)
@@ -161,23 +164,26 @@ def load_data(intensity_csv, annotation_csv, gui=False):
         logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
         logger.debug('Loaded groups: %s' % groups)
 
+        # load annotation dataframe from csv, setting the first column to be the index
+        lines = uploaded_file_to_strings(annotation_csv)
+        annotations = StringIO('\n'.join(lines))
+        annotation_df = pd.read_csv(annotations, index_col=0)
+        logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
+
     else:  # for command-line use
         int_df = pd.read_csv(intensity_csv, skiprows=[1], index_col=0)
         groups = get_groups(intensity_csv)
         logger.debug('Loaded %d x %d peak intensities from %s' % (int_df.shape[0], int_df.shape[1], intensity_csv))
         logger.debug('Loaded groups: %s' % groups)
 
-    # load annotation dataframe from csv, setting the first column to be the index
-    lines = uploadedFileToStrings(annotation_csv)
-    annotations = StringIO('\n'.join(lines))
-    annotation_df = pd.read_csv(annotations, index_col=0)
-    logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
+        annotation_df = pd.read_csv(annotation_csv, index_col=0)
+        logger.debug('Loaded %d peak annotations from %s' % (annotation_df.shape[0], annotation_csv))
 
     return int_df, annotation_df, groups
 
 
-def uploadedFileToStrings(intensity_csv):
-    bytesData = intensity_csv.getvalue()
+def uploaded_file_to_strings(csv_file):
+    bytesData = csv_file.getvalue()
     stringio = StringIO(str(bytesData, 'utf-8'))
     lines = stringio.readlines()
     return lines
@@ -218,8 +224,28 @@ def _parse_groups(lines):
 
 
 class Method(object):
-    def get_pathway_df(self):
+    def __init__(self, data_source, seed=None, preprocessors=None):
+        if seed is None:
+            random.seed()
+        else:
+            random.seed(seed)
+
+        self.data_source = copy.deepcopy(data_source)
+        if preprocessors is None:
+            self.preprocessors = self._create_preprocessors()
+
+    def get_results(self):
         raise NotImplementedError()
+
+    def _create_preprocessors(self):
+        return []
+
+    def _get_measurement_df(self, preprocess):
+        df = self.data_source.get_measurements()
+        if preprocess:
+            for p in self.preprocessors:
+                df = p.process(df)
+        return df
 
 
 # https://discuss.streamlit.io/t/how-to-set-file-download-function/2141

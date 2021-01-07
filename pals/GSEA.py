@@ -1,10 +1,9 @@
-import copy
-
 import numpy as np
 import pandas as pd
 from gseapy.gsea import GSEA
 from loguru import logger
 
+from .preprocessing import MinValueImputation, RowAverageImputation
 from .common import is_comparison_used, GSEA_RANKING_SNR, NUM_RESAMPLES, Method, post_filter_df_by_min_hits
 
 
@@ -27,7 +26,8 @@ class MSEA(GSEA):
 
 class GSEA(Method):
 
-    def __init__(self, data_source, num_resamples=NUM_RESAMPLES, method=GSEA_RANKING_SNR, case=None, control=None):
+    def __init__(self, data_source, num_resamples=NUM_RESAMPLES, method=GSEA_RANKING_SNR, case=None, control=None,
+                 preprocessors=None):
         """
         Creates a GSEA analysis
         This GSEA implementation is based on gseaPy.
@@ -36,23 +36,32 @@ class GSEA(Method):
         :param pbar: whether to show progress bar or not
         """
         logger.debug('GSEA initialised with num_resamples=%d and ranking_method=%s' % (num_resamples, method))
-        self.data_source = copy.deepcopy(data_source)
+        super().__init__(data_source, preprocessors=preprocessors)
         self.num_resamples = num_resamples
         self.method = method
         self.case = case
         self.control = control
 
+    def _create_preprocessors(self):
+        groups = self.data_source.groups
+        min_replace = self.data_source.min_replace
+        preprocessors = [
+            MinValueImputation(groups, min_replace),
+            RowAverageImputation(groups),
+        ]
+        return preprocessors
+
     ####################################################################################################################
     # public methods
     ####################################################################################################################
 
-    def get_pathway_df(self):
+    def get_results(self, preprocess=True):
         """
         Main method to perform GSEA/MSEA analysis
         :return: a dataframe containing pathway analysis results from GSEA
         """
         logger.debug('Calculating GSEA')
-        measurement_df = self.data_source.change_zero_peak_ints()
+        measurement_df = self._get_measurement_df(preprocess)
 
         annot_df = self.data_source.get_annotations()
         joined = pd.merge(left=measurement_df, right=annot_df, left_index=True, right_index=True)

@@ -128,7 +128,6 @@ class DataSource(object):
 
     def get_measurements(self):
         df = self.measurement_df.copy()
-        df[df < 0] = 0 # prevent negative values in df
         return df
 
     def get_annotations(self):
