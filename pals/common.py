@@ -234,8 +234,11 @@ class Method(object):
         if preprocessors is None:
             self.preprocessors = self._create_preprocessors()
 
-    def get_results(self):
+    def get_results(self, preprocess=True):
         raise NotImplementedError()
+
+    def get_pathway_df(self, standardize=True): # to support old method calls
+        return self.get_results(preprocess=standardize)
 
     def _create_preprocessors(self):
         return []
