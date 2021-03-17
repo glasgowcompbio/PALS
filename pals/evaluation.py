@@ -142,15 +142,15 @@ def _get_noise_performance(params):
 
     # run ORA
     ora = ORA(ds)
-    ora_df = ora.get_pathway_df(correct_multiple_tests=True)
+    ora_df = ora.get_results(correct_multiple_tests=True)
 
     # run PALS
     pals = PLAGE(ds, plage_weight=plage_weight, hg_weight=hg_weight)
-    pals_df = pals.get_pathway_df()
+    pals_df = pals.get_results()
 
     # run GSEA
     gsea = GSEA(ds, num_resamples=gsea_resamples, method=gsea_ranking_method)
-    gsea_df = gsea.get_pathway_df()
+    gsea_df = gsea.get_results()
 
     # store the results
     item = {
@@ -345,15 +345,15 @@ def _get_resampled_performance(params):
 
     # run ORA on the resampled data
     ora = ORA(ds_resampled, case=case, control=control)
-    ora_df = ora.get_pathway_df()
+    ora_df = ora.get_results()
 
     # run PALS on the resampled data
     pals = PLAGE(ds_resampled, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
-    pals_df = pals.get_pathway_df()
+    pals_df = pals.get_results()
 
     # run GSEA on the resampled data
     gsea = GSEA(ds_resampled, num_resamples=gsea_resamples, method=gsea_ranking_method, case=case, control=control)
-    gsea_df = gsea.get_pathway_df()
+    gsea_df = gsea.get_results()
 
     # store the results
     item = {
@@ -377,15 +377,15 @@ def get_method_true_answers(res, N=None):
 
     # generate the true answers for each method
     pals = PLAGE(ds, plage_weight=plage_weight, hg_weight=hg_weight, case=case, control=control)
-    pals_full_df = pals.get_pathway_df()
+    pals_full_df = pals.get_results()
     pals_full = _select_significant_entries(pals_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
 
     ora = ORA(ds, case=case, control=control)
-    ora_full_df = ora.get_pathway_df()
+    ora_full_df = ora.get_results()
     ora_full = _select_significant_entries(ora_full_df, significant_column, SIGNIFICANT_THRESHOLD, N)
 
     gsea = GSEA(ds, num_resamples=gsea_resamples, method=gsea_ranking_method, case=case, control=control)
-    gsea_full_df = gsea.get_pathway_df()
+    gsea_full_df = gsea.get_results()
     gsea_full = _select_significant_entries(gsea_full_df, significant_column, GSEA_SIGNIFICANT_THRESHOLD, N)
 
     method_true_answers = {

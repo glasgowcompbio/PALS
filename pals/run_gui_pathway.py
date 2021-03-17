@@ -155,7 +155,7 @@ def run_pathway_analysis(params):
 def pathway_analysis_plage(ds):
     my_bar = st.progress(0)
     method = PLAGE(ds)
-    df = method.get_pathway_df(streamlit_pbar=my_bar)
+    df = method.get_results()
     my_bar.empty()
     return df
 
@@ -163,14 +163,14 @@ def pathway_analysis_plage(ds):
 @st.cache
 def pathway_analysis_ora(ds):
     method = ORA(ds)
-    df = method.get_pathway_df()
+    df = method.get_results()
     return df
 
 
 @st.cache
 def pathway_analysis_gsea(ds):
     method = GSEA(ds)
-    df = method.get_pathway_df()
+    df = method.get_results()
     return df
 
 

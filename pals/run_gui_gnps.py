@@ -123,7 +123,7 @@ def to_data_source(database):
 def PLAGE_decomposition(ds):
     my_bar = st.progress(0)
     method = PLAGE(ds)
-    df = method.get_pathway_df(streamlit_pbar=my_bar)
+    df = method.get_results()
     my_bar.empty()
     return df
 

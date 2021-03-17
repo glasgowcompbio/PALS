@@ -123,7 +123,7 @@ def main():
     assert method is not None
 
     # save the results
-    df = method.get_pathway_df()
+    df = method.get_results()
 
     # filter results to show only the columns we want
     try:
