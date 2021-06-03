@@ -237,9 +237,6 @@ Additionally Molecular Families and Mass2Motifs analysis have also been included
 
 ### 9. Publication
 
-If you're using PALS, please cite the following publication.
+If you are using PALS, please cite the following publication.
 
-**Pre-print:**
-
-Mcluskey, K., Wandy, J., Vincent, I., Hooft, J. J. J. Van Der, Rogers, S., & Burgess, K. (2020). *Decomposing metabolite set activity levels with PALS.* Lc, 1–12.
-[https://www.biorxiv.org/content/10.1101/2020.06.07.138974v1](https://www.biorxiv.org/content/10.1101/2020.06.07.138974v1).
+Mcluskey, K., Wandy, J., Vincent, I., Hooft, J. J. J. Van Der, Rogers, S., Burgess, K. & Daly, R. (2021). *Ranking Metabolite Sets by Their Activity Levels.* Metabolites. 11(2):103 https://doi.org/10.3390/metabo11020103
