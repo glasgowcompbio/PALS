@@ -31,17 +31,69 @@ It can be run directly by typing its name from the shell.**
 #### Usage Parameters
 
 ```
-usage: run.py [-h] --db {PiMP_KEGG,COMPOUND,ChEBI,UniProt,ENSEMBL}
-              --comparisons COMPARISONS [COMPARISONS ...]
-              [--min_replace MIN_REPLACE]
-              [--species {Arabidopsis thaliana,Bos taurus,Caenorhabditis elegans,
-              Canis lupus familiaris,Danio rerio,Dictyostelium discoideum,
-              Drosophila melanogaster,Gallus gallus,Homo sapiens,Mus musculus,
-              Oryza sativa,Rattus norvegicus,Saccharomyces cerevisiae,Sus scrofa}]
+PLAGE/ORA/GSEA
+usage: run.py [-h] -x [--method] {PLAGE, ORA, GSEA} 
+              
+              
+        --db, The pathway database to use. Valid choices are as follows. 
+              - *PiMP_KEGG*: KEGG compound database exported from PiMP.
+              - *COMPOUND*: Reactome compound database matching by KEGG ids.
+              - *ChEBI*: Reactome compound database matching by ChEBI ids.
+              - *UniProt*: Reactome protein database matching by UniProt ids.
+              - *ENSEMBL*: Reactome gene database matching by ENSEMBL ids.        
+              
+              Note that *PiMP_KEGG*, *COMPOUND* and *ChEBI* are for metabolomics use, while *UniProt* and *ENSEMBL* are for 
+              proteomics and transcriptomics use respectively. {PiMP_KEGG,COMPOUND,ChEBI,UniProt,ENSEMBL}
+              
+       --comparisons, Specifies the comparisons to make, e.g. `--comparisons beer1/beer2 beer3/beer4` to specify 
+                      beer1 (case) vs beer2 (control), as well as beer3 (case) vs beer4 (control). COMPARISONS [COMPARISONS ...]
+              
+       --min_replace, The minimum intensity value for data imputation, e.g. `--min_replace 5000`. Defaults to 5000.      
+              
+       --species, Species name for Reactome pathway query, e.g. `--species "Homo sapiens"`. Defaults to Homo Sapiens. 
+                  {Arabidopsis thaliana,Bos taurus,Caenorhabditis elegans,
+                   Canis lupus familiaris,Danio rerio,Dictyostelium discoideum,
+                   Drosophila melanogaster,Gallus gallus,Homo sapiens,Mus musculus,
+                   Oryza sativa,Rattus norvegicus,Saccharomyces cerevisiae,Sus scrofa}
+            
               [--use_all_reactome_pathways] [--connect_to_reactome_server]
-              {PLAGE,ORA,GSEA} intensity_csv annotation_csv output_file
+              intensity_csv annotation_csv output_file
+
+MUMMICHOG
+usage: run_pals.py [-h] -x [--method] {MUMMICHOG}
+       
+       Basic usage example:
+       python run_pals.py -f mydata.txt -o myoutput
+       
+       -f, --infile: single file as input, 
+              containing all features with tab-delimited columns
+              m/z, retention time, p-value, statistic score
+
+        -n, --network: network model to use (default human_mfn; models being ported to version 2), 
+              [human_mfn, worm]
+
+        -o, --output: output file identification string (default 'mcgresult')
+        -k, --workdir: directory for all data files.
+              Default is current directory.
+
+        -m, --mode: analytical mode of mass spec, [positive, negative, pos_defult].
+              Default is pos_defult, a short version of positive.
+        -u, --instrument: Any integer, treated as ppm of instrument accuracy. Default is 10. 
+
+        -p, --permutation: number of permutation to estimate null distributions.
+              Default is 100.
+        -z,   --force_primary_ion: one of primary ions, 
+              ['M+H[1+]', 'M+Na[1+]', 'M-H2O+H[1+]', 'M-H[-]', 'M-2H[2-]', 'M-H2O-H[-]'],  
+              must be present for a predicted metabolite, [True, False].
+              Default is True.
+
+        -c, --cutoff: optional cutoff p-value in user supplied statistics,
+              used to select significant list of features. 
+        -d, --modeling: modeling permutation data, [no, gamma].
+              Default is no.
+              
 ```
-- **method**: Pathway ranking method to use, e.g. PLAGE, ORA or GSEA.
+- **method**: Pathway ranking method to use, e.g. PLAGE, ORA, GSEA, MUMMICHOG.
 - **intensity_csv**: Input intensity CSV file
 - **annotation\_csv**: Input annotation CSV file
 - **output_file**: Output pathway ranking file.
@@ -128,6 +180,8 @@ row_id,entity_id
 ### 5. Other Pathway Analysis Methods
 
 ORA and GSEA are used as comparisons and are both included in PALS, and can be used for benchmarking and analysis. For more details, please refer to our paper.
+
+We have made available a topological analysis method; mummichog in PALS. This requires a single tab-separated table containing mass-to-charge (m/Z) and retention time data in its usage.
 
 ### 6. Web Interface
 
