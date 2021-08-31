@@ -23,6 +23,7 @@ def run_noise_experiment(background_pathways, case_fnames, control_fnames, pathw
     pals_dfs = []
     ora_dfs = []
     gsea_dfs = []
+    mummichog_dfs = []
     random = False  # whether to sample intensity data randomly or using pre-set values
 
     exp_results = {}

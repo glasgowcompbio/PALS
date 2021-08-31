@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+        <html xmlns="http://www.w3.org/1999/xhtml"> 
+        <head> 
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+        <title>Mummichog Report</title> 
+
+        <style type="text/css"> 
+        body {width: 960px; padding: 10px; }
+        
+        div.colorbar {margin-bottom: 7px}
+        div.networkvisual { margin: auto; height: 600px; width: 960px; overflow: auto !important;}
+        div.svg2 { margin: auto; height: 600px; width: 960px; overflow: auto !important;}
+
+        div.stats {margin-top: 10; font-size:0.7em; color:#888;}
+
+        div.moduleline{font-size: 0.9em; font-weight: bold;
+        }
+        div.metabolites {
+            font-size: 0.7em;
+            padding-left: 15px; padding-bottom: 7px;
+        }
+        
+        footer { margin-top: 30px;    padding: 10px 0;    border-top: 1px solid #582E2E;    font-size:0.7em;    color:#888;}
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Trebuchet MS', 'Lucida Grande', Arial, Sans-Serif;
+            font-weight: bold;
+        }
+        
+        h1 { font-size: 1.4em; }
+        h2 { font-size: 1.2em; }
+        h3 { font-size: 1em; }
+        h4 { font-size: 0.9em;     padding-left: 15px; padding-bottom: 2px; margin-bottom:0px;}
+        th {
+            background: #DAFDCF;
+            font-size:0.9em;
+            text-align: left;
+            padding:5px;
+        }
+        
+        tr:nth-child(even) {background-color: #f2f2f2}
+        tr:hover {background-color: #f5f5f5}
+        
+        td {
+            font-family: Verdana, Arial, sans-serif;
+            color: black;
+            font-size:0.7em;
+            margin:10px;
+            margin-top:0px;
+            padding: 5px;
+        }
+        
+        .node {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+        
+        .link {
+          stroke: #999;
+          stroke-opacity: .6;
+        }
+        div.network_selection {float: left; margin-top: 6; margin-bottom: 10; font-size:0.8em;}
+        </style> 
+        <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js" charset="utf-8"></script>
+        <script src="https://shuzhao-li.github.io/mummichog.org/download/cytoscape.min.js" charset="utf-8"></script>
+        <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-spread/1.0.9/cytoscape-spread.js"></script> 
+        <script src="js/plotly-latest.min.js"></script>
+        <script src="js/plotly-graphs.js"></script>
+        <script src="js/result.js"></script>
+        </head> 
+        <body> 
+        <h1>Mummichog Report: t2</h1>
+<div id="colorbar" class="colorbar"></div>
+<div class="stats">mummichog version: 2.4.4, using metabolic model MFN_1.10.4.<br></div>
+<h2>User input data</h2>
+<p>User supplied 7995 features as reference list.We are using 634 features (p < 0.000100) as significant list. The feature level data are shown in the Manhattan plots below.</p>
+<div id="mz_user_input"></div>
+<div id="retention_time_input"></div>
+<h2>Top pathways</h2>
+<p>The reference feature list is mapped to 561 EmpiricalCompounds, significant features to 79 EmpiricalCompounds. In the table below, pathway_size is number of detected EmpiricalCompounds for each pathway; overlap_size is number of significant EmpiricalCompounds.                                Empirical p-values are estimated by permutation test. Details on EmpiricalCompounds are in 'tables/ListOfEmpiricalCompounds.tsv'.</p>
+<div class="pathwaystablly"><table><tr><th>Pathways</th>                    <th>overlap_size</th><th>pathway_size</th><th>p-value</th>                    <th>overlap_EmpiricalCompounds</th></tr><tr> <td>Vitamin B9 (folate) metabolism</td> <td>4</td><td>5</td><td>0.00109</td><td>E758,E932,E622,E385</td></tr><tr> <td>Carnitine shuttle</td> <td>5</td><td>13</td><td>0.01412</td><td>E1292,E1047,E1462,E1463,E1390</td></tr><tr> <td>Ascorbate (Vitamin C) and Aldarate Metabolism</td> <td>4</td><td>9</td><td>0.01538</td><td>E291,E1414,E884,E450</td></tr><tr> <td>Methionine and cysteine metabolism</td> <td>10</td><td>40</td><td>0.02395</td><td>E796,E763,E884,E1130,E765,E912,E951,E450,E385,E314</td></tr><tr> <td>Glycosphingolipid metabolism</td> <td>6</td><td>20</td><td>0.02806</td><td>E907,E753,E636,E872,E1439,E863</td></tr><tr> <td>Drug metabolism - cytochrome P450</td> <td>4</td><td>11</td><td>0.03017</td><td>E1262,E81,E186,E947</td></tr><tr> <td>Galactose metabolism</td> <td>5</td><td>16</td><td>0.03252</td><td>E1400,E753,E636,E108,E1389</td></tr><tr> <td>Alanine and Aspartate Metabolism</td> <td>5</td><td>16</td><td>0.03252</td><td>E622,E610,E951,E385,E605</td></tr><tr> <td>Glycosphingolipid biosynthesis - globoseries</td> <td>3</td><td>7</td><td>0.03327</td><td>E753,E907,E636</td></tr><tr> <td>Propanoate metabolism</td> <td>3</td><td>7</td><td>0.03327</td><td>E1414,E108,E951</td></tr><tr> <td>Sialic acid metabolism</td> <td>5</td><td>17</td><td>0.04033</td><td>E907,E753,E636,E1389,E562</td></tr><tr> <td>Glycosphingolipid biosynthesis - ganglioseries</td> <td>3</td><td>8</td><td>0.04655</td><td>E753,E907,E636</td></tr><tr> <td>Purine metabolism</td> <td>8</td><td>34</td><td>0.04689</td><td>E291,E282,E955,E951,E385,E1471,E562,E281</td></tr><tr> <td>Tryptophan metabolism</td> <td>10</td><td>46</td><td>0.04958</td><td>E539,E751,E540,E1275,E636,E829,E951,E450,E385,E492</td></tr></table></div>
+<div id="pathwayBarPlot"></div>
+<h2>Top modules</h2>
+<p>Network modules may capture concerted metabolite activities that are missed by predefined pathways.         Use pull-down menus to visualize modules and the activity network, which tries to combine the results of         pathway/module analyses. The visualization requires interenet connection.</p>
+<div id="network_selection" class="network_selection">Showing
+        <select id="nmodule_select" onchange="updateDrawing();">
+        <option>Module 1</option><option>Module 2</option>  <option>Activity network</option>
+                   </select>
+                    Node size <select id="nsize_select"  onchange="updateDrawing();">
+                      <option value=16>Medium</option>
+                      <option value=8>Small</option>
+                      <option value=32>Large</option>
+                    </select>
+                    Visual style <select id="vstyle_select"  onchange="updateDrawing();">
+                      <option value=0>Drag</option>
+                      <option value=1>Force</option>
+                    </select>
+                    </div>
+<div id="networkvisual" class="networkvisual"></div>
+<div class="modulestablly"><div class="moduleline">module_1, p=0.00828, 11 metabolites</div><div class="metabolites">dCMP, AMP, L-Citrulline; 2-Amino-5-ureidovaleric acid; Citrulline, 13'-carboxy-gama-tocotrienol, Inosine, dGMP, dAMP, L-Phenylalanine, Hypoxanthine, Adenine, L-Arginine</div><div class="moduleline">module_2, p=0.03034, 47 metabolites</div><div class="metabolites">D-Glucosamine 6-phosphate, dCMP, N-Acetyl-D-glucosamine, alpha-D-Glucose, 5-L-Glutamyl-L-alanine, Sphinganine, L-Glutamate, AMP, L-Citrulline; 2-Amino-5-ureidovaleric acid; Citrulline, 13'-carboxy-gama-tocotrienol, Spermidine, N-Formyl-L-glutamate, L-Cystine; L-Dicysteine; L-alpha-Diamino-beta-dithiolactic acid, Inosine, Stachyose, D-Galactosamine 6-phosphate, N-Acetyl-D-mannosamine; 2-Acetamido-2-deoxy-D-mannose, N1-Acetylspermidine, myo-Inositol, D-Fructose, dGMP, Reduced glutathione, dAMP, Dihydropteroate; 7,8-Dihydropteroate, Amylose; Amylose chain; (1,4-alpha-D-Glucosyl)n; (1,4-alpha-D-Glucosyl)n+1; (1,4-alpha-D-Glucosyl)n-1; 4-{(1,4)-alpha-D-Glucosyl}(n-1)-D-glucose; 1,4-alpha-D-Glucan, D-Mannose, 3-Dehydrosphinganine, N-Acetyl-D-galactosamine, Galactose, D-Galactose, Maltotetraose, D-Glucose, L-Phenylalanine, beta-D-Fructose; beta-Fruit sugar; beta-D-arabino-Hexulose; beta-Levulose; Fructose, Sphingosine, dehydrospermidine, beta-D-Glucose, Phosphoenolpyruvate, Hypoxanthine, cis-beta-D-Glucosyl-2-hydroxycinnamate; beta-D-Glucosyl-2-coumarinate, 5-Methylthioadenosine, Oxidized glutathione, Adenine, L-Arginine, D-Lactate, Galactan, </div>
+</div>
+<h2>EmpiricalCompounds favored by above analyses</h2>
+<p>An EmpiricalCompound is a computational unit for a tentative metabolite. It can group multiple ions,                     and be any of the isobaric/isomeric species. This table contains EmpiricalCompounds prioritized by pathway/module analysis.</p>
+<div class="metabolitestablly"><table><tr><th>EmpiricalCompound</th><th>Input m/z</th>                    <th>Retention time</th><th>ion</th><th>mz_diff</th><th>Statistic</th>                    <th>Significant</th></tr><tr > <td>E751</td> <td colspan="2">Best guess: C00643, 5-Hydroxy-L-tryptophan</td><td colspan="4">C00643</td></tr><tr> <td> </td> <td>221.0942</td> <td>58.0</td><td>M+H[1+]</td><td>0.0021</td><td>-1.67</td><td>no</td></tr><tr> <td> </td> <td>222.0972</td> <td>57.0</td><td>M(C13)+H[1+]</td><td>0.0017</td><td>-6.72</td><td>yes</td></tr><tr> <td> </td> <td>289.0779</td> <td>61.0</td><td>M+HCOONa[1+]</td><td>-0.0016</td><td>4.89</td><td>no</td></tr><tr > <td>E753</td> <td colspan="2">Best guess: C00140, N-Acetyl-D-glucosamine</td><td colspan="4">C01074, C01132, C00645, C00140</td></tr><tr> <td> </td> <td>222.0972</td> <td>57.0</td><td>M+H[1+]</td><td>0.0</td><td>-6.72</td><td>yes</td></tr><tr> <td> </td> <td>244.0784</td> <td>58.0</td><td>M+Na[1+]</td><td>-0.0008</td><td>11.31</td><td>yes</td></tr><tr > <td>E1414</td> <td colspan="2">Best guess: C02225, 2-Methylcitrate</td><td colspan="4">C00725, C04593, C02225</td></tr><tr> <td> </td> <td>207.051</td> <td>84.0</td><td>M+H[1+]</td><td>0.001</td><td>7.34</td><td>yes</td></tr><tr > <td>E1282</td> <td colspan="2">Best guess: C03740, 5-L-Glutamyl-L-alanine</td><td colspan="4">C03740</td></tr><tr> <td> </td> <td>241.0791</td> <td>114.0</td><td>M+Na[1+]</td><td>-0.0004</td><td>9.64</td><td>yes</td></tr><tr > <td>E1471</td> <td colspan="2">Best guess: C00294, Inosine</td><td colspan="4">C00294</td></tr><tr> <td> </td> <td>269.0874</td> <td>57.0</td><td>M+H[1+]</td><td>-0.0007</td><td>42.09</td><td>yes</td></tr><tr > <td>E610</td> <td colspan="2">Best guess: C00792, D-Arginine</td><td colspan="4">C00062, C00792</td></tr><tr> <td> </td> <td>175.1183</td> <td>50.0</td><td>M+H[1+]</td><td>-0.0007</td><td>-5.29</td><td>yes</td></tr><tr> <td> </td> <td>176.1216</td> <td>39.0</td><td>M(C13)+H[1+]</td><td>-0.0008</td><td>-23.32</td><td>yes</td></tr><tr > <td>E758</td> <td colspan="2">Best guess: C00504, Folate</td><td colspan="4">C00504</td></tr><tr> <td> </td> <td>222.0768</td> <td>159.0</td><td>M(C13)+2H[2+]</td><td>-0.002</td><td>1.09</td><td>no</td></tr><tr> <td> </td> <td>442.1462</td> <td>162.0</td><td>M+H[1+]</td><td>-0.0008</td><td>5.33</td><td>yes</td></tr><tr> <td> </td> <td>443.1493</td> <td>162.0</td><td>M(C13)+H[1+]</td><td>-0.0011</td><td>5.32</td><td>yes</td></tr><tr> <td> </td> <td>464.127</td> <td>161.0</td><td>M+Na[1+]</td><td>-0.002</td><td>5.75</td><td>yes</td></tr><tr> <td> </td> <td>221.5757</td> <td>160.0</td><td>M+2H[2+]</td><td>-0.0014</td><td>9.92</td><td>yes</td></tr><tr > <td>E1292</td> <td colspan="2">Best guess: C02990, L-Palmitoylcarnitine</td><td colspan="4">C02990</td></tr><tr> <td> </td> <td>400.3405</td> <td>366.0</td><td>M+H[1+]</td><td>-0.0017</td><td>8.63</td><td>yes</td></tr><tr > <td>E763</td> <td colspan="2">Best guess: C00542, Cystathionine</td><td colspan="4">C02291, C00542</td></tr><tr> <td> </td> <td>245.059</td> <td>132.0</td><td>M+Na[1+]</td><td>0.0023</td><td>-5.44</td><td>yes</td></tr><tr > <td>E376</td> <td colspan="2">Best guess: C00315, Spermidine</td><td colspan="4">CE5586, C00315</td></tr><tr> <td> </td> <td>146.1649</td> <td>40.0</td><td>M+H[1+]</td><td>-0.0003</td><td>6.45</td><td>yes</td></tr><tr> <td> </td> <td>147.1683</td> <td>41.0</td><td>M(C13)+H[1+]</td><td>-0.0003</td><td>6.22</td><td>yes</td></tr><tr > <td>E765</td> <td colspan="2">Best guess: C00542, Cystathionine</td><td colspan="4">C02291, C00542</td></tr><tr> <td> </td> <td>223.0731</td> <td>518.0</td><td>M+H[1+]</td><td>-0.0016</td><td>-8.17</td><td>yes</td></tr><tr > <td>E622</td> <td colspan="2">Best guess: C01042, N-Acetyl-L-aspartate</td><td colspan="4">C01045, C01042</td></tr><tr> <td> </td> <td>176.0544</td> <td>300.0</td><td>M+H[1+]</td><td>-0.001</td><td>10.41</td><td>yes</td></tr><tr> <td> </td> <td>177.0595</td> <td>275.0</td><td>M(C13)+H[1+]</td><td>0.0007</td><td>3.36</td><td>no</td></tr><tr > <td>E932</td> <td colspan="2">Best guess: C00921, Dihydropteroate</td><td colspan="4">C00921</td></tr><tr> <td> </td> <td>337.1006</td> <td>471.0</td><td>M+Na[1+]</td><td>-0.0014</td><td>-6.39</td><td>yes</td></tr><tr > <td>E385</td> <td colspan="2">Best guess: C05938, L-4-Hydroxyglutamate semialdehyde</td><td colspan="4">C00217, C00025, C00302, C05938</td></tr><tr> <td> </td> <td>170.0414</td> <td>65.0</td><td>M+Na[1+]</td><td>-0.0011</td><td>8.04</td><td>yes</td></tr><tr> <td> </td> <td>148.0601</td> <td>66.0</td><td>M+H[1+]</td><td>-0.0004</td><td>-1.28</td><td>no</td></tr><tr > <td>E1389</td> <td colspan="2">Best guess: C05796, Galactan</td><td colspan="4">C00718, C05796</td></tr><tr> <td> </td> <td>371.1583</td> <td>58.0</td><td>M+H[1+]</td><td>0.0035</td><td>-6.25</td><td>yes</td></tr><tr > <td>E235</td> <td colspan="2">Best guess: C06377, D-Galactosamine 6-phosphate</td><td colspan="4">C00352, C12214, C06377</td></tr><tr> <td> </td> <td>260.0516</td> <td>509.0</td><td>M+H[1+]</td><td>-0.0014</td><td>11.19</td><td>yes</td></tr><tr > <td>E1390</td> <td colspan="2">Best guess: ttdcrn, tetradecanoyl carnitine</td><td colspan="4">ttdcrn</td></tr><tr> <td> </td> <td>372.3093</td> <td>127.0</td><td>M+H[1+]</td><td>-0.0015</td><td>5.32</td><td>yes</td></tr><tr > <td>E281</td> <td colspan="2">Best guess: C00147, Adenine</td><td colspan="4">C00147</td></tr><tr> <td> </td> <td>136.0623</td> <td>60.0</td><td>M+H[1+]</td><td>0.0005</td><td>5.58</td><td>yes</td></tr><tr > <td>E539</td> <td colspan="2">Best guess: C03824, 2-Aminomuconate 6-semialdehyde</td><td colspan="4">C03824</td></tr><tr> <td> </td> <td>164.0303</td> <td>75.0</td><td>M+Na[1+]</td><td>-0.0016</td><td>-6.59</td><td>yes</td></tr><tr > <td>E282</td> <td colspan="2">Best guess: C00147, Adenine</td><td colspan="4">C00147</td></tr><tr> <td> </td> <td>158.044</td> <td>300.0</td><td>M+Na[1+]</td><td>0.0002</td><td>12.44</td><td>yes</td></tr><tr > <td>E1047</td> <td colspan="2">Best guess: tmndnccrn, Timnodonyl carnitine</td><td colspan="4">tmndnccrn</td></tr><tr> <td> </td> <td>468.3072</td> <td>245.0</td><td>M+Na[1+]</td><td>-0.0013</td><td>5.21</td><td>yes</td></tr><tr > <td>E829</td> <td colspan="2">Best guess: C05648, 5-Hydroxy-N-formylkynurenine</td><td colspan="4">C05648</td></tr><tr> <td> </td> <td>275.0662</td> <td>133.0</td><td>M+Na[1+]</td><td>0.0023</td><td>-6.25</td><td>yes</td></tr><tr > <td>E1438</td> <td colspan="2">Best guess: C00239, dCMP</td><td colspan="4">C00239</td></tr><tr> <td> </td> <td>308.0626</td> <td>117.0</td><td>M+H[1+]</td><td>-0.0016</td><td>9.75</td><td>yes</td></tr><tr > <td>E1439</td> <td colspan="2">Best guess: C12144, Phytosphingosine</td><td colspan="4">C12144</td></tr><tr> <td> </td> <td>318.2995</td> <td>82.0</td><td>M+H[1+]</td><td>-0.0008</td><td>-6.65</td><td>yes</td></tr><tr > <td>E291</td> <td colspan="2">Best guess: C00262, Hypoxanthine</td><td colspan="4">C01620, C00262</td></tr><tr> <td> </td> <td>137.0448</td> <td>56.0</td><td>M+H[1+]</td><td>-0.001</td><td>24.79</td><td>yes</td></tr><tr> <td> </td> <td>159.0264</td> <td>57.0</td><td>M+Na[1+]</td><td>-0.0014</td><td>0.02</td><td>no</td></tr><tr > <td>E947</td> <td colspan="2">Best guess: C16548, N,N-Didesmethyltamoxifen</td><td colspan="4">C16548</td></tr><tr> <td> </td> <td>344.2034</td> <td>46.0</td><td>M+H[1+]</td><td>0.0025</td><td>-1.01</td><td>no</td></tr><tr> <td> </td> <td>366.1834</td> <td>43.0</td><td>M+Na[1+]</td><td>0.0005</td><td>-7.87</td><td>yes</td></tr><tr > <td>E636</td> <td colspan="2">Best guess: C00159, D-Mannose</td><td colspan="4">C00031, C00221, C00247, C02336, C00267, C00738, C00936, C00095, C00962, C01582, C00795, C00137, C00293, C00124, C00984, C00159</td></tr><tr> <td> </td> <td>203.0517</td> <td>59.0</td><td>M+Na[1+]</td><td>-0.001</td><td>-7.06</td><td>yes</td></tr><tr > <td>E450</td> <td colspan="2">Best guess: C00051, Reduced glutathione</td><td colspan="4">C00051</td></tr><tr> <td> </td> <td>308.0896</td> <td>97.0</td><td>M+H[1+]</td><td>-0.0015</td><td>-20.98</td><td>yes</td></tr><tr> <td> </td> <td>330.0716</td> <td>102.0</td><td>M+Na[1+]</td><td>-0.0015</td><td>-12.64</td><td>yes</td></tr><tr> <td> </td> <td>154.5498</td> <td>89.0</td><td>M+2H[2+]</td><td>0.0006</td><td>-0.61</td><td>no</td></tr><tr > <td>E951</td> <td colspan="2">Best guess: C00362, dGMP</td><td colspan="4">C00020, C00362</td></tr><tr> <td> </td> <td>348.0698</td> <td>551.0</td><td>M+H[1+]</td><td>-0.0006</td><td>7.89</td><td>yes</td></tr><tr > <td>E952</td> <td colspan="2">Best guess: C05839, cis-beta-D-Glucosyl-2-hydroxycinnamate</td><td colspan="4">C05839</td></tr><tr> <td> </td> <td>349.0871</td> <td>380.0</td><td>M+Na[1+]</td><td>-0.0024</td><td>-7.68</td><td>yes</td></tr><tr > <td>E1400</td> <td colspan="2">Best guess: C01613, Stachyose</td><td colspan="4">C02052, C01613</td></tr><tr> <td> </td> <td>689.2106</td> <td>55.0</td><td>M+Na[1+]</td><td>-0.0006</td><td>5.72</td><td>yes</td></tr><tr > <td>E955</td> <td colspan="2">Best guess: C00360, dAMP</td><td colspan="4">C00360</td></tr><tr> <td> </td> <td>333.0772</td> <td>338.0</td><td>M(C13)+H[1+]</td><td>-0.0017</td><td>6.79</td><td>yes</td></tr><tr> <td> </td> <td>354.0563</td> <td>339.0</td><td>M+Na[1+]</td><td>-0.0012</td><td>3.87</td><td>no</td></tr><tr > <td>E1008</td> <td colspan="2">Best guess: CE7072, 13'-carboxy-gama-tocotrienol</td><td colspan="4">CE7072</td></tr><tr> <td> </td> <td>462.2738</td> <td>374.0</td><td>M+Na[1+]</td><td>-0.0003</td><td>7.59</td><td>yes</td></tr><tr > <td>E796</td> <td colspan="2">Best guess: C00491, L-Cystine</td><td colspan="4">C00491</td></tr><tr> <td> </td> <td>241.0296</td> <td>446.0</td><td>M+H[1+]</td><td>-0.0015</td><td>5.21</td><td>yes</td></tr><tr > <td>E1462</td> <td colspan="2">Best guess: hdcecrn, Hexadecenoyl carnitine</td><td colspan="4">hdd2crn, hdcecrn</td></tr><tr> <td> </td> <td>398.3257</td> <td>162.0</td><td>M+H[1+]</td><td>-0.0008</td><td>17.51</td><td>yes</td></tr><tr > <td>E1408</td> <td colspan="2">Best guess: C00612, N1-Acetylspermidine</td><td colspan="4">C01029, C00612</td></tr><tr> <td> </td> <td>188.1757</td> <td>43.0</td><td>M+H[1+]</td><td>-0.0001</td><td>35.95</td><td>yes</td></tr><tr> <td> </td> <td>189.1785</td> <td>40.0</td><td>M(C13)+H[1+]</td><td>-0.0007</td><td>4.95</td><td>no</td></tr><tr > <td>E1463</td> <td colspan="2">Best guess: odecrn, octadecenoyl carnitine</td><td colspan="4">elaidcrn, vacccrn, odecrn</td></tr><tr> <td> </td> <td>426.3562</td> <td>550.0</td><td>M+H[1+]</td><td>-0.0016</td><td>9.38</td><td>yes</td></tr><tr > <td>E605</td> <td colspan="2">Best guess: C00327, L-Citrulline</td><td colspan="4">C00327</td></tr><tr> <td> </td> <td>176.1021</td> <td>54.0</td><td>M+H[1+]</td><td>-0.0009</td><td>42.97</td><td>yes</td></tr><tr > <td>E314</td> <td colspan="2">Best guess: C05844, 5-L-Glutamyl-taurine</td><td colspan="4">C05844</td></tr><tr> <td> </td> <td>255.0634</td> <td>498.0</td><td>M+H[1+]</td><td>-0.0012</td><td>24.14</td><td>yes</td></tr><tr > <td>E907</td> <td colspan="2">Best guess: C00128, CMP-N-acetylneuraminate</td><td colspan="4">C00128</td></tr><tr> <td> </td> <td>615.1487</td> <td>295.0</td><td>M+H[1+]</td><td>-0.0059</td><td>-9.51</td><td>yes</td></tr><tr > <td>E540</td> <td colspan="2">Best guess: C03824, 2-Aminomuconate 6-semialdehyde</td><td colspan="4">C03824</td></tr><tr> <td> </td> <td>142.0501</td> <td>143.0</td><td>M+H[1+]</td><td>0.0002</td><td>8.28</td><td>yes</td></tr><tr > <td>E1130</td> <td colspan="2">Best guess: C02712, N-Acetylmethionine</td><td colspan="4">C02712</td></tr><tr> <td> </td> <td>214.0508</td> <td>82.0</td><td>M+Na[1+]</td><td>-0.0001</td><td>-10.96</td><td>yes</td></tr><tr > <td>E912</td> <td colspan="2">Best guess: C00170, 5-Methylthioadenosine</td><td colspan="4">C00170</td></tr><tr> <td> </td> <td>320.0817</td> <td>107.0</td><td>M+Na[1+]</td><td>0.0028</td><td>-6.76</td><td>yes</td></tr><tr > <td>E108</td> <td colspan="2">Best guess: C00184, Dihydroxyacetone</td><td colspan="4">C00577, C00256, C01013, C00186, C00184</td></tr><tr> <td> </td> <td>113.0203</td> <td>103.0</td><td>M+Na[1+]</td><td>-0.0007</td><td>35.62</td><td>yes</td></tr><tr > <td>E550</td> <td colspan="2">Best guess: C00079, L-Phenylalanine</td><td colspan="4">C00079, CE2172</td></tr><tr> <td> </td> <td>166.0853</td> <td>55.0</td><td>M+H[1+]</td><td>-0.001</td><td>1.0</td><td>no</td></tr><tr> <td> </td> <td>167.0886</td> <td>55.0</td><td>M(C13)+H[1+]</td><td>-0.0011</td><td>-5.82</td><td>yes</td></tr><tr > <td>E186</td> <td colspan="2">Best guess: C16584, p-Hydroxyfelbamate</td><td colspan="4">C16582, C16584</td></tr><tr> <td> </td> <td>277.0812</td> <td>65.0</td><td>M+Na[1+]</td><td>0.0016</td><td>-8.05</td><td>yes</td></tr><tr> <td> </td> <td>256.1026</td> <td>66.0</td><td>M(C13)+H[1+]</td><td>0.0016</td><td>-2.75</td><td>no</td></tr><tr > <td>E863</td> <td colspan="2">Best guess: C00319, Sphingosine</td><td colspan="4">C02934, C00319</td></tr><tr> <td> </td> <td>300.2883</td> <td>107.0</td><td>M+H[1+]</td><td>-0.0014</td><td>-5.48</td><td>yes</td></tr><tr> <td> </td> <td>301.2916</td> <td>107.0</td><td>M(C13)+H[1+]</td><td>-0.0015</td><td>-2.04</td><td>no</td></tr><tr > <td>E492</td> <td colspan="2">Best guess: C02220, 2-Aminomuconate</td><td colspan="4">C02220</td></tr><tr> <td> </td> <td>158.044</td> <td>300.0</td><td>M+H[1+]</td><td>-0.0008</td><td>12.44</td><td>yes</td></tr><tr > <td>E872</td> <td colspan="2">Best guess: C00836, Sphinganine</td><td colspan="4">C00836</td></tr><tr> <td> </td> <td>302.304</td> <td>135.0</td><td>M+H[1+]</td><td>-0.0014</td><td>-6.63</td><td>yes</td></tr><tr > <td>E562</td> <td colspan="2">Best guess: C00074, Phosphoenolpyruvate</td><td colspan="4">C00074</td></tr><tr> <td> </td> <td>168.9891</td> <td>552.0</td><td>M+H[1+]</td><td>-0.0006</td><td>5.19</td><td>yes</td></tr><tr > <td>E1262</td> <td colspan="2">Best guess: C07030, </td><td colspan="4">C07030</td></tr><tr> <td> </td> <td>602.1696</td> <td>510.0</td><td>M+Na[1+]</td><td>-0.004</td><td>-11.6</td><td>yes</td></tr><tr > <td>E81</td> <td colspan="2">Best guess: C16587, 3-Carbamoyl-2-phenylpropionaldehyde</td><td colspan="4">C16595, C16587</td></tr><tr> <td> </td> <td>216.0629</td> <td>168.0</td><td>M+Na[1+]</td><td>-0.0003</td><td>9.23</td><td>yes</td></tr><tr > <td>E884</td> <td colspan="2">Best guess: C00127, Oxidized glutathione</td><td colspan="4">C00127</td></tr><tr> <td> </td> <td>307.0828</td> <td>295.0</td><td>M+2H[2+]</td><td>-0.0005</td><td>-19.16</td><td>yes</td></tr><tr> <td> </td> <td>307.5834</td> <td>295.0</td><td>M(C13)+2H[2+]</td><td>-0.0016</td><td>-96.72</td><td>yes</td></tr><tr> <td> </td> <td>613.1556</td> <td>295.0</td><td>M+H[1+]</td><td>-0.0037</td><td>-93.14</td><td>yes</td></tr><tr> <td> </td> <td>614.1602</td> <td>295.0</td><td>M(C13)+H[1+]</td><td>-0.0025</td><td>-7.89</td><td>yes</td></tr><tr> <td> </td> <td>635.1401</td> <td>305.0</td><td>M+Na[1+]</td><td>-0.0012</td><td>-4.96</td><td>no</td></tr><tr > <td>E1275</td> <td colspan="2">Best guess: C00780, Serotonin</td><td colspan="4">C00780</td></tr><tr> <td> </td> <td>177.1024</td> <td>64.0</td><td>M+H[1+]</td><td>0.0001</td><td>14.27</td><td>yes</td></tr></table></div>
+<h2>More data</h2>
+<p class="moreinformation">Full data tables from pathway analysis, module analysis and activity network are stored in the 'tables/' directory. 
+            The tsv files can be imported into a spreadsheet program, e.g. MS Excel.
+            Under the 'figures/network_modules/' directory are files intended for Cytoscape (cytoscape.org) visualization. Please refer to Cytoscape's guides for details.
+            Details of this run are recorded in file mummichog.log.txt.
+            </p>
+<footer>Mummichog algorithms are described in Li et al. Predicting Network Activity from High Throughput Metabolomics. PLoS Computational Biology (2013); doi:10.1371/journal.pcbi.1003123.        This software is provided as is, without warranty of any kind. Visit <a href="http://mummichog.org">http://mummichog.org</a> for updates.
+        </footer>
+
+        <script type="text/javascript" charset="utf-8">
+        var nodes = [ [{name:"dCMP", group:11}, {name:"AMP", group:10}, {name:"L-Citrulline", group:19}, {name:"13'-carboxy-gama-tocotrienol", group:10}, {name:"Inosine", group:18}, {name:"dGMP", group:10}, {name:"dAMP", group:10}, {name:"L-Phenylalanine", group:8}, {name:"Hypoxanthine", group:14}, {name:"Adenine", group:10}, {name:"L-Arginine", group:8}, ], [{name:"D-Glucosamine 6-phosphate", group:11}, {name:"dCMP", group:11}, {name:"N-Acetyl-D-glucosamine", group:11}, {name:"alpha-D-Glucose", group:8}, {name:"5-L-Glutamyl-L-alanine", group:11}, {name:"Sphinganine", group:8}, {name:"L-Glutamate", group:10}, {name:"AMP", group:10}, {name:"L-Citrulline", group:19}, {name:"13'-carboxy-gama-tocotrienol", group:10}, {name:"Spermidine", group:10}, {name:"N-Formyl-L-glutamate", group:11}, {name:"L-Cystine", group:10}, {name:"Inosine", group:18}, {name:"Stachyose", group:10}, {name:"D-Galactosamine 6-phosphate", group:11}, {name:"N-Acetyl-D-mannosamine", group:8}, {name:"N1-Acetylspermidine", group:17}, {name:"myo-Inositol", group:8}, {name:"D-Fructose", group:8}, {name:"dGMP", group:10}, {name:"Reduced glutathione", group:7}, {name:"dAMP", group:10}, {name:"Dihydropteroate", group:8}, {name:"Amylose", group:8}, {name:"D-Mannose", group:8}, {name:"3-Dehydrosphinganine", group:8}, {name:"N-Acetyl-D-galactosamine", group:11}, {name:"Galactose", group:8}, {name:"D-Galactose", group:8}, {name:"Maltotetraose", group:10}, {name:"D-Glucose", group:8}, {name:"L-Phenylalanine", group:8}, {name:"beta-D-Fructose", group:8}, {name:"Sphingosine", group:8}, {name:"dehydrospermidine", group:10}, {name:"beta-D-Glucose", group:8}, {name:"Phosphoenolpyruvate", group:10}, {name:"Hypoxanthine", group:14}, {name:"cis-beta-D-Glucosyl-2-hydroxycinnamate", group:8}, {name:"5-Methylthioadenosine", group:8}, {name:"Oxidized glutathione", group:8}, {name:"Adenine", group:10}, {name:"L-Arginine", group:8}, {name:"D-Lactate", group:17}, {name:"Galactan", group:8}, {name:"C01029", group:17}, ], [{name:"D-Glucosamine 6-phosphate", group:11}, {name:"dCMP", group:11}, {name:"N-Acetyl-D-glucosamine", group:11}, {name:"alpha-D-Glucose", group:8}, {name:"5-L-Glutamyl-L-alanine", group:11}, {name:"Sphinganine", group:8}, {name:"L-Glutamate", group:10}, {name:"AMP", group:10}, {name:"L-Citrulline", group:19}, {name:"13'-carboxy-gama-tocotrienol", group:10}, {name:"Spermidine", group:10}, {name:"N-Formyl-L-glutamate", group:11}, {name:"L-Cystine", group:10}, {name:"Inosine", group:18}, {name:"Stachyose", group:10}, {name:"D-Galactosamine 6-phosphate", group:11}, {name:"N-Acetyl-D-mannosamine", group:8}, {name:"N1-Acetylspermidine", group:17}, {name:"myo-Inositol", group:8}, {name:"D-Fructose", group:8}, {name:"dGMP", group:10}, {name:"Reduced glutathione", group:7}, {name:"dAMP", group:10}, {name:"Dihydropteroate", group:8}, {name:"Amylose", group:8}, {name:"D-Mannose", group:8}, {name:"3-Dehydrosphinganine", group:8}, {name:"N-Acetyl-D-galactosamine", group:11}, {name:"Galactose", group:8}, {name:"D-Galactose", group:8}, {name:"Maltotetraose", group:10}, {name:"D-Glucose", group:8}, {name:"L-Phenylalanine", group:8}, {name:"beta-D-Fructose", group:8}, {name:"Sphingosine", group:8}, {name:"dehydrospermidine", group:10}, {name:"beta-D-Glucose", group:8}, {name:"Phosphoenolpyruvate", group:10}, {name:"Hypoxanthine", group:14}, {name:"cis-beta-D-Glucosyl-2-hydroxycinnamate", group:8}, {name:"5-Methylthioadenosine", group:8}, {name:"Oxidized glutathione", group:8}, {name:"Adenine", group:10}, {name:"L-Arginine", group:8}, {name:"D-Lactate", group:17}, {name:"Galactan", group:8}, {name:"C01029", group:17}, ], ];
+
+        var links = [[{source:0, target:1}, {source:0, target:4}, {source:0, target:5}, {source:0, target:6}, {source:1, target:2}, {source:1, target:3}, {source:1, target:4}, {source:1, target:5}, {source:1, target:6}, {source:1, target:7}, {source:1, target:8}, {source:1, target:9}, {source:1, target:10}, {source:2, target:10}, {source:4, target:5}, {source:4, target:6}, {source:4, target:8}, {source:4, target:9}, {source:5, target:6}, {source:8, target:9}, ], [{source:0, target:6}, {source:0, target:15}, {source:1, target:7}, {source:1, target:13}, {source:1, target:20}, {source:1, target:22}, {source:2, target:16}, {source:2, target:25}, {source:2, target:27}, {source:3, target:24}, {source:3, target:28}, {source:3, target:29}, {source:3, target:30}, {source:3, target:33}, {source:3, target:36}, {source:3, target:45}, {source:4, target:21}, {source:5, target:26}, {source:5, target:34}, {source:6, target:7}, {source:6, target:11}, {source:6, target:21}, {source:6, target:23}, {source:6, target:32}, {source:7, target:8}, {source:7, target:9}, {source:7, target:13}, {source:7, target:20}, {source:7, target:22}, {source:7, target:31}, {source:7, target:32}, {source:7, target:38}, {source:7, target:42}, {source:7, target:43}, {source:8, target:43}, {source:10, target:17}, {source:10, target:35}, {source:10, target:40}, {source:10, target:46}, {source:12, target:21}, {source:12, target:41}, {source:13, target:20}, {source:13, target:22}, {source:13, target:38}, {source:13, target:42}, {source:14, target:18}, {source:14, target:25}, {source:14, target:29}, {source:14, target:31}, {source:16, target:37}, {source:18, target:25}, {source:18, target:29}, {source:18, target:31}, {source:19, target:31}, {source:20, target:22}, {source:21, target:41}, {source:21, target:44}, {source:25, target:29}, {source:25, target:31}, {source:28, target:29}, {source:28, target:36}, {source:28, target:45}, {source:29, target:31}, {source:29, target:34}, {source:29, target:36}, {source:29, target:45}, {source:31, target:39}, {source:36, target:45}, {source:38, target:42}, {source:40, target:42}, ], [{source:0, target:6}, {source:0, target:15}, {source:1, target:7}, {source:1, target:13}, {source:1, target:20}, {source:1, target:22}, {source:2, target:16}, {source:2, target:25}, {source:2, target:27}, {source:3, target:24}, {source:3, target:28}, {source:3, target:29}, {source:3, target:30}, {source:3, target:33}, {source:3, target:36}, {source:3, target:45}, {source:4, target:21}, {source:5, target:26}, {source:5, target:34}, {source:6, target:7}, {source:6, target:11}, {source:6, target:21}, {source:6, target:23}, {source:6, target:32}, {source:7, target:8}, {source:7, target:9}, {source:7, target:13}, {source:7, target:20}, {source:7, target:22}, {source:7, target:31}, {source:7, target:32}, {source:7, target:38}, {source:7, target:42}, {source:7, target:43}, {source:8, target:43}, {source:10, target:17}, {source:10, target:35}, {source:10, target:40}, {source:10, target:46}, {source:12, target:21}, {source:12, target:41}, {source:13, target:20}, {source:13, target:22}, {source:13, target:38}, {source:13, target:42}, {source:14, target:18}, {source:14, target:25}, {source:14, target:29}, {source:14, target:31}, {source:16, target:37}, {source:18, target:25}, {source:18, target:29}, {source:18, target:31}, {source:19, target:31}, {source:20, target:22}, {source:21, target:41}, {source:21, target:44}, {source:25, target:29}, {source:25, target:31}, {source:28, target:29}, {source:28, target:36}, {source:28, target:45}, {source:29, target:31}, {source:29, target:34}, {source:29, target:36}, {source:29, target:45}, {source:31, target:39}, {source:36, target:45}, {source:38, target:42}, {source:40, target:42}, ], ];
+
+        var cytonodes = [ [{ data: {id:"dCMP", group:11} }, { data: {id:"AMP", group:10} }, { data: {id:"L-Citrulline", group:19} }, { data: {id:"13'-carboxy-gama-tocotrienol", group:10} }, { data: {id:"Inosine", group:18} }, { data: {id:"dGMP", group:10} }, { data: {id:"dAMP", group:10} }, { data: {id:"L-Phenylalanine", group:8} }, { data: {id:"Hypoxanthine", group:14} }, { data: {id:"Adenine", group:10} }, { data: {id:"L-Arginine", group:8} }, ], [{ data: {id:"D-Glucosamine 6-phosphate", group:11} }, { data: {id:"dCMP", group:11} }, { data: {id:"N-Acetyl-D-glucosamine", group:11} }, { data: {id:"alpha-D-Glucose", group:8} }, { data: {id:"5-L-Glutamyl-L-alanine", group:11} }, { data: {id:"Sphinganine", group:8} }, { data: {id:"L-Glutamate", group:10} }, { data: {id:"AMP", group:10} }, { data: {id:"L-Citrulline", group:19} }, { data: {id:"13'-carboxy-gama-tocotrienol", group:10} }, { data: {id:"Spermidine", group:10} }, { data: {id:"N-Formyl-L-glutamate", group:11} }, { data: {id:"L-Cystine", group:10} }, { data: {id:"Inosine", group:18} }, { data: {id:"Stachyose", group:10} }, { data: {id:"D-Galactosamine 6-phosphate", group:11} }, { data: {id:"N-Acetyl-D-mannosamine", group:8} }, { data: {id:"N1-Acetylspermidine", group:17} }, { data: {id:"myo-Inositol", group:8} }, { data: {id:"D-Fructose", group:8} }, { data: {id:"dGMP", group:10} }, { data: {id:"Reduced glutathione", group:7} }, { data: {id:"dAMP", group:10} }, { data: {id:"Dihydropteroate", group:8} }, { data: {id:"Amylose", group:8} }, { data: {id:"D-Mannose", group:8} }, { data: {id:"3-Dehydrosphinganine", group:8} }, { data: {id:"N-Acetyl-D-galactosamine", group:11} }, { data: {id:"Galactose", group:8} }, { data: {id:"D-Galactose", group:8} }, { data: {id:"Maltotetraose", group:10} }, { data: {id:"D-Glucose", group:8} }, { data: {id:"L-Phenylalanine", group:8} }, { data: {id:"beta-D-Fructose", group:8} }, { data: {id:"Sphingosine", group:8} }, { data: {id:"dehydrospermidine", group:10} }, { data: {id:"beta-D-Glucose", group:8} }, { data: {id:"Phosphoenolpyruvate", group:10} }, { data: {id:"Hypoxanthine", group:14} }, { data: {id:"cis-beta-D-Glucosyl-2-hydroxycinnamate", group:8} }, { data: {id:"5-Methylthioadenosine", group:8} }, { data: {id:"Oxidized glutathione", group:8} }, { data: {id:"Adenine", group:10} }, { data: {id:"L-Arginine", group:8} }, { data: {id:"D-Lactate", group:17} }, { data: {id:"Galactan", group:8} }, { data: {id:"C01029", group:17} }, ], [{ data: {id:"D-Glucosamine 6-phosphate", group:11} }, { data: {id:"dCMP", group:11} }, { data: {id:"N-Acetyl-D-glucosamine", group:11} }, { data: {id:"alpha-D-Glucose", group:8} }, { data: {id:"5-L-Glutamyl-L-alanine", group:11} }, { data: {id:"Sphinganine", group:8} }, { data: {id:"L-Glutamate", group:10} }, { data: {id:"AMP", group:10} }, { data: {id:"L-Citrulline", group:19} }, { data: {id:"13'-carboxy-gama-tocotrienol", group:10} }, { data: {id:"Spermidine", group:10} }, { data: {id:"N-Formyl-L-glutamate", group:11} }, { data: {id:"L-Cystine", group:10} }, { data: {id:"Inosine", group:18} }, { data: {id:"Stachyose", group:10} }, { data: {id:"D-Galactosamine 6-phosphate", group:11} }, { data: {id:"N-Acetyl-D-mannosamine", group:8} }, { data: {id:"N1-Acetylspermidine", group:17} }, { data: {id:"myo-Inositol", group:8} }, { data: {id:"D-Fructose", group:8} }, { data: {id:"dGMP", group:10} }, { data: {id:"Reduced glutathione", group:7} }, { data: {id:"dAMP", group:10} }, { data: {id:"Dihydropteroate", group:8} }, { data: {id:"Amylose", group:8} }, { data: {id:"D-Mannose", group:8} }, { data: {id:"3-Dehydrosphinganine", group:8} }, { data: {id:"N-Acetyl-D-galactosamine", group:11} }, { data: {id:"Galactose", group:8} }, { data: {id:"D-Galactose", group:8} }, { data: {id:"Maltotetraose", group:10} }, { data: {id:"D-Glucose", group:8} }, { data: {id:"L-Phenylalanine", group:8} }, { data: {id:"beta-D-Fructose", group:8} }, { data: {id:"Sphingosine", group:8} }, { data: {id:"dehydrospermidine", group:10} }, { data: {id:"beta-D-Glucose", group:8} }, { data: {id:"Phosphoenolpyruvate", group:10} }, { data: {id:"Hypoxanthine", group:14} }, { data: {id:"cis-beta-D-Glucosyl-2-hydroxycinnamate", group:8} }, { data: {id:"5-Methylthioadenosine", group:8} }, { data: {id:"Oxidized glutathione", group:8} }, { data: {id:"Adenine", group:10} }, { data: {id:"L-Arginine", group:8} }, { data: {id:"D-Lactate", group:17} }, { data: {id:"Galactan", group:8} }, { data: {id:"C01029", group:17} }, ], ];
+
+        var cytoedges = [[{ data: { id: "C00239-C00020", weight: 1, source: "dCMP", target: "AMP" } }, { data: { id: "C00239-C00294", weight: 1, source: "dCMP", target: "Inosine" } }, { data: { id: "C00239-C00362", weight: 1, source: "dCMP", target: "dGMP" } }, { data: { id: "C00239-C00360", weight: 1, source: "dCMP", target: "dAMP" } }, { data: { id: "C00020-C00327", weight: 1, source: "AMP", target: "L-Citrulline" } }, { data: { id: "C00020-CE7072", weight: 1, source: "AMP", target: "13'-carboxy-gama-tocotrienol" } }, { data: { id: "C00020-C00294", weight: 1, source: "AMP", target: "Inosine" } }, { data: { id: "C00020-C00362", weight: 1, source: "AMP", target: "dGMP" } }, { data: { id: "C00020-C00360", weight: 1, source: "AMP", target: "dAMP" } }, { data: { id: "C00020-C00079", weight: 1, source: "AMP", target: "L-Phenylalanine" } }, { data: { id: "C00020-C00262", weight: 1, source: "AMP", target: "Hypoxanthine" } }, { data: { id: "C00020-C00147", weight: 1, source: "AMP", target: "Adenine" } }, { data: { id: "C00020-C00062", weight: 1, source: "AMP", target: "L-Arginine" } }, { data: { id: "C00327-C00062", weight: 1, source: "L-Citrulline", target: "L-Arginine" } }, { data: { id: "C00294-C00362", weight: 1, source: "Inosine", target: "dGMP" } }, { data: { id: "C00294-C00360", weight: 1, source: "Inosine", target: "dAMP" } }, { data: { id: "C00294-C00262", weight: 1, source: "Inosine", target: "Hypoxanthine" } }, { data: { id: "C00294-C00147", weight: 1, source: "Inosine", target: "Adenine" } }, { data: { id: "C00362-C00360", weight: 1, source: "dGMP", target: "dAMP" } }, { data: { id: "C00262-C00147", weight: 1, source: "Hypoxanthine", target: "Adenine" } }, ], [{ data: { id: "C00352-C00025", weight: 1, source: "D-Glucosamine 6-phosphate", target: "L-Glutamate" } }, { data: { id: "C00352-C06377", weight: 1, source: "D-Glucosamine 6-phosphate", target: "D-Galactosamine 6-phosphate" } }, { data: { id: "C00239-C00020", weight: 1, source: "dCMP", target: "AMP" } }, { data: { id: "C00239-C00294", weight: 1, source: "dCMP", target: "Inosine" } }, { data: { id: "C00239-C00362", weight: 1, source: "dCMP", target: "dGMP" } }, { data: { id: "C00239-C00360", weight: 1, source: "dCMP", target: "dAMP" } }, { data: { id: "C00140-C00645", weight: 1, source: "N-Acetyl-D-glucosamine", target: "N-Acetyl-D-mannosamine" } }, { data: { id: "C00140-C00159", weight: 1, source: "N-Acetyl-D-glucosamine", target: "D-Mannose" } }, { data: { id: "C00140-C01132", weight: 1, source: "N-Acetyl-D-glucosamine", target: "N-Acetyl-D-galactosamine" } }, { data: { id: "C00267-C00718", weight: 1, source: "alpha-D-Glucose", target: "Amylose" } }, { data: { id: "C00267-C01582", weight: 1, source: "alpha-D-Glucose", target: "Galactose" } }, { data: { id: "C00267-C00124", weight: 1, source: "alpha-D-Glucose", target: "D-Galactose" } }, { data: { id: "C00267-C02052", weight: 1, source: "alpha-D-Glucose", target: "Maltotetraose" } }, { data: { id: "C00267-C02336", weight: 1, source: "alpha-D-Glucose", target: "beta-D-Fructose" } }, { data: { id: "C00267-C00221", weight: 1, source: "alpha-D-Glucose", target: "beta-D-Glucose" } }, { data: { id: "C00267-C05796", weight: 1, source: "alpha-D-Glucose", target: "Galactan" } }, { data: { id: "C03740-C00051", weight: 1, source: "5-L-Glutamyl-L-alanine", target: "Reduced glutathione" } }, { data: { id: "C00836-C02934", weight: 1, source: "Sphinganine", target: "3-Dehydrosphinganine" } }, { data: { id: "C00836-C00319", weight: 1, source: "Sphinganine", target: "Sphingosine" } }, { data: { id: "C00025-C00020", weight: 1, source: "L-Glutamate", target: "AMP" } }, { data: { id: "C00025-C01045", weight: 1, source: "L-Glutamate", target: "N-Formyl-L-glutamate" } }, { data: { id: "C00025-C00051", weight: 1, source: "L-Glutamate", target: "Reduced glutathione" } }, { data: { id: "C00025-C00921", weight: 1, source: "L-Glutamate", target: "Dihydropteroate" } }, { data: { id: "C00025-C00079", weight: 1, source: "L-Glutamate", target: "L-Phenylalanine" } }, { data: { id: "C00020-C00327", weight: 1, source: "AMP", target: "L-Citrulline" } }, { data: { id: "C00020-CE7072", weight: 1, source: "AMP", target: "13'-carboxy-gama-tocotrienol" } }, { data: { id: "C00020-C00294", weight: 1, source: "AMP", target: "Inosine" } }, { data: { id: "C00020-C00362", weight: 1, source: "AMP", target: "dGMP" } }, { data: { id: "C00020-C00360", weight: 1, source: "AMP", target: "dAMP" } }, { data: { id: "C00020-C00031", weight: 1, source: "AMP", target: "D-Glucose" } }, { data: { id: "C00020-C00079", weight: 1, source: "AMP", target: "L-Phenylalanine" } }, { data: { id: "C00020-C00262", weight: 1, source: "AMP", target: "Hypoxanthine" } }, { data: { id: "C00020-C00147", weight: 1, source: "AMP", target: "Adenine" } }, { data: { id: "C00020-C00062", weight: 1, source: "AMP", target: "L-Arginine" } }, { data: { id: "C00327-C00062", weight: 1, source: "L-Citrulline", target: "L-Arginine" } }, { data: { id: "C00315-C00612", weight: 1, source: "Spermidine", target: "N1-Acetylspermidine" } }, { data: { id: "C00315-CE5586", weight: 1, source: "Spermidine", target: "dehydrospermidine" } }, { data: { id: "C00315-C00170", weight: 1, source: "Spermidine", target: "5-Methylthioadenosine" } }, { data: { id: "C00315-C01029", weight: 1, source: "Spermidine", target: "C01029" } }, { data: { id: "C00491-C00051", weight: 1, source: "L-Cystine", target: "Reduced glutathione" } }, { data: { id: "C00491-C00127", weight: 1, source: "L-Cystine", target: "Oxidized glutathione" } }, { data: { id: "C00294-C00362", weight: 1, source: "Inosine", target: "dGMP" } }, { data: { id: "C00294-C00360", weight: 1, source: "Inosine", target: "dAMP" } }, { data: { id: "C00294-C00262", weight: 1, source: "Inosine", target: "Hypoxanthine" } }, { data: { id: "C00294-C00147", weight: 1, source: "Inosine", target: "Adenine" } }, { data: { id: "C01613-C00137", weight: 1, source: "Stachyose", target: "myo-Inositol" } }, { data: { id: "C01613-C00159", weight: 1, source: "Stachyose", target: "D-Mannose" } }, { data: { id: "C01613-C00124", weight: 1, source: "Stachyose", target: "D-Galactose" } }, { data: { id: "C01613-C00031", weight: 1, source: "Stachyose", target: "D-Glucose" } }, { data: { id: "C00645-C00074", weight: 1, source: "N-Acetyl-D-mannosamine", target: "Phosphoenolpyruvate" } }, { data: { id: "C00137-C00159", weight: 1, source: "myo-Inositol", target: "D-Mannose" } }, { data: { id: "C00137-C00124", weight: 1, source: "myo-Inositol", target: "D-Galactose" } }, { data: { id: "C00137-C00031", weight: 1, source: "myo-Inositol", target: "D-Glucose" } }, { data: { id: "C00095-C00031", weight: 1, source: "D-Fructose", target: "D-Glucose" } }, { data: { id: "C00362-C00360", weight: 1, source: "dGMP", target: "dAMP" } }, { data: { id: "C00051-C00127", weight: 1, source: "Reduced glutathione", target: "Oxidized glutathione" } }, { data: { id: "C00051-C00256", weight: 1, source: "Reduced glutathione", target: "D-Lactate" } }, { data: { id: "C00159-C00124", weight: 1, source: "D-Mannose", target: "D-Galactose" } }, { data: { id: "C00159-C00031", weight: 1, source: "D-Mannose", target: "D-Glucose" } }, { data: { id: "C01582-C00124", weight: 1, source: "Galactose", target: "D-Galactose" } }, { data: { id: "C01582-C00221", weight: 1, source: "Galactose", target: "beta-D-Glucose" } }, { data: { id: "C01582-C05796", weight: 1, source: "Galactose", target: "Galactan" } }, { data: { id: "C00124-C00031", weight: 1, source: "D-Galactose", target: "D-Glucose" } }, { data: { id: "C00124-C00319", weight: 1, source: "D-Galactose", target: "Sphingosine" } }, { data: { id: "C00124-C00221", weight: 1, source: "D-Galactose", target: "beta-D-Glucose" } }, { data: { id: "C00124-C05796", weight: 1, source: "D-Galactose", target: "Galactan" } }, { data: { id: "C00031-C05839", weight: 1, source: "D-Glucose", target: "cis-beta-D-Glucosyl-2-hydroxycinnamate" } }, { data: { id: "C00221-C05796", weight: 1, source: "beta-D-Glucose", target: "Galactan" } }, { data: { id: "C00262-C00147", weight: 1, source: "Hypoxanthine", target: "Adenine" } }, { data: { id: "C00170-C00147", weight: 1, source: "5-Methylthioadenosine", target: "Adenine" } }, ], [{ data: { id: "C00352-C00025", weight: 1, source: "D-Glucosamine 6-phosphate", target: "L-Glutamate" } }, { data: { id: "C00352-C06377", weight: 1, source: "D-Glucosamine 6-phosphate", target: "D-Galactosamine 6-phosphate" } }, { data: { id: "C00239-C00020", weight: 1, source: "dCMP", target: "AMP" } }, { data: { id: "C00239-C00294", weight: 1, source: "dCMP", target: "Inosine" } }, { data: { id: "C00239-C00362", weight: 1, source: "dCMP", target: "dGMP" } }, { data: { id: "C00239-C00360", weight: 1, source: "dCMP", target: "dAMP" } }, { data: { id: "C00140-C00645", weight: 1, source: "N-Acetyl-D-glucosamine", target: "N-Acetyl-D-mannosamine" } }, { data: { id: "C00140-C00159", weight: 1, source: "N-Acetyl-D-glucosamine", target: "D-Mannose" } }, { data: { id: "C00140-C01132", weight: 1, source: "N-Acetyl-D-glucosamine", target: "N-Acetyl-D-galactosamine" } }, { data: { id: "C00267-C00718", weight: 1, source: "alpha-D-Glucose", target: "Amylose" } }, { data: { id: "C00267-C01582", weight: 1, source: "alpha-D-Glucose", target: "Galactose" } }, { data: { id: "C00267-C00124", weight: 1, source: "alpha-D-Glucose", target: "D-Galactose" } }, { data: { id: "C00267-C02052", weight: 1, source: "alpha-D-Glucose", target: "Maltotetraose" } }, { data: { id: "C00267-C02336", weight: 1, source: "alpha-D-Glucose", target: "beta-D-Fructose" } }, { data: { id: "C00267-C00221", weight: 1, source: "alpha-D-Glucose", target: "beta-D-Glucose" } }, { data: { id: "C00267-C05796", weight: 1, source: "alpha-D-Glucose", target: "Galactan" } }, { data: { id: "C03740-C00051", weight: 1, source: "5-L-Glutamyl-L-alanine", target: "Reduced glutathione" } }, { data: { id: "C00836-C02934", weight: 1, source: "Sphinganine", target: "3-Dehydrosphinganine" } }, { data: { id: "C00836-C00319", weight: 1, source: "Sphinganine", target: "Sphingosine" } }, { data: { id: "C00025-C00020", weight: 1, source: "L-Glutamate", target: "AMP" } }, { data: { id: "C00025-C01045", weight: 1, source: "L-Glutamate", target: "N-Formyl-L-glutamate" } }, { data: { id: "C00025-C00051", weight: 1, source: "L-Glutamate", target: "Reduced glutathione" } }, { data: { id: "C00025-C00921", weight: 1, source: "L-Glutamate", target: "Dihydropteroate" } }, { data: { id: "C00025-C00079", weight: 1, source: "L-Glutamate", target: "L-Phenylalanine" } }, { data: { id: "C00020-C00327", weight: 1, source: "AMP", target: "L-Citrulline" } }, { data: { id: "C00020-CE7072", weight: 1, source: "AMP", target: "13'-carboxy-gama-tocotrienol" } }, { data: { id: "C00020-C00294", weight: 1, source: "AMP", target: "Inosine" } }, { data: { id: "C00020-C00362", weight: 1, source: "AMP", target: "dGMP" } }, { data: { id: "C00020-C00360", weight: 1, source: "AMP", target: "dAMP" } }, { data: { id: "C00020-C00031", weight: 1, source: "AMP", target: "D-Glucose" } }, { data: { id: "C00020-C00079", weight: 1, source: "AMP", target: "L-Phenylalanine" } }, { data: { id: "C00020-C00262", weight: 1, source: "AMP", target: "Hypoxanthine" } }, { data: { id: "C00020-C00147", weight: 1, source: "AMP", target: "Adenine" } }, { data: { id: "C00020-C00062", weight: 1, source: "AMP", target: "L-Arginine" } }, { data: { id: "C00327-C00062", weight: 1, source: "L-Citrulline", target: "L-Arginine" } }, { data: { id: "C00315-C00612", weight: 1, source: "Spermidine", target: "N1-Acetylspermidine" } }, { data: { id: "C00315-CE5586", weight: 1, source: "Spermidine", target: "dehydrospermidine" } }, { data: { id: "C00315-C00170", weight: 1, source: "Spermidine", target: "5-Methylthioadenosine" } }, { data: { id: "C00315-C01029", weight: 1, source: "Spermidine", target: "C01029" } }, { data: { id: "C00491-C00051", weight: 1, source: "L-Cystine", target: "Reduced glutathione" } }, { data: { id: "C00491-C00127", weight: 1, source: "L-Cystine", target: "Oxidized glutathione" } }, { data: { id: "C00294-C00362", weight: 1, source: "Inosine", target: "dGMP" } }, { data: { id: "C00294-C00360", weight: 1, source: "Inosine", target: "dAMP" } }, { data: { id: "C00294-C00262", weight: 1, source: "Inosine", target: "Hypoxanthine" } }, { data: { id: "C00294-C00147", weight: 1, source: "Inosine", target: "Adenine" } }, { data: { id: "C01613-C00137", weight: 1, source: "Stachyose", target: "myo-Inositol" } }, { data: { id: "C01613-C00159", weight: 1, source: "Stachyose", target: "D-Mannose" } }, { data: { id: "C01613-C00124", weight: 1, source: "Stachyose", target: "D-Galactose" } }, { data: { id: "C01613-C00031", weight: 1, source: "Stachyose", target: "D-Glucose" } }, { data: { id: "C00645-C00074", weight: 1, source: "N-Acetyl-D-mannosamine", target: "Phosphoenolpyruvate" } }, { data: { id: "C00137-C00159", weight: 1, source: "myo-Inositol", target: "D-Mannose" } }, { data: { id: "C00137-C00124", weight: 1, source: "myo-Inositol", target: "D-Galactose" } }, { data: { id: "C00137-C00031", weight: 1, source: "myo-Inositol", target: "D-Glucose" } }, { data: { id: "C00095-C00031", weight: 1, source: "D-Fructose", target: "D-Glucose" } }, { data: { id: "C00362-C00360", weight: 1, source: "dGMP", target: "dAMP" } }, { data: { id: "C00051-C00127", weight: 1, source: "Reduced glutathione", target: "Oxidized glutathione" } }, { data: { id: "C00051-C00256", weight: 1, source: "Reduced glutathione", target: "D-Lactate" } }, { data: { id: "C00159-C00124", weight: 1, source: "D-Mannose", target: "D-Galactose" } }, { data: { id: "C00159-C00031", weight: 1, source: "D-Mannose", target: "D-Glucose" } }, { data: { id: "C01582-C00124", weight: 1, source: "Galactose", target: "D-Galactose" } }, { data: { id: "C01582-C00221", weight: 1, source: "Galactose", target: "beta-D-Glucose" } }, { data: { id: "C01582-C05796", weight: 1, source: "Galactose", target: "Galactan" } }, { data: { id: "C00124-C00031", weight: 1, source: "D-Galactose", target: "D-Glucose" } }, { data: { id: "C00124-C00319", weight: 1, source: "D-Galactose", target: "Sphingosine" } }, { data: { id: "C00124-C00221", weight: 1, source: "D-Galactose", target: "beta-D-Glucose" } }, { data: { id: "C00124-C05796", weight: 1, source: "D-Galactose", target: "Galactan" } }, { data: { id: "C00031-C05839", weight: 1, source: "D-Glucose", target: "cis-beta-D-Glucosyl-2-hydroxycinnamate" } }, { data: { id: "C00221-C05796", weight: 1, source: "beta-D-Glucose", target: "Galactan" } }, { data: { id: "C00262-C00147", weight: 1, source: "Hypoxanthine", target: "Adenine" } }, { data: { id: "C00170-C00147", weight: 1, source: "5-Methylthioadenosine", target: "Adenine" } }, ], ];
+
+
+        var w = 960, h = 600;
+        var color = d3.scale.category20b();
+        var node_sizes = [16, 8, 32]
+        
+        var scalebar = d3.select("#colorbar").append("svg").attr("id", "svg_colorbar").attr("width", w).attr("height", 10);
+        var coloridx = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+        scalebar.selectAll("rect")
+           .data(coloridx)
+           .enter()
+           .append("rect")
+           .attr("x", function(d, i) {return i * 48;})
+           .attr("y", 0)
+           .attr("width", 48)
+           .attr("height", 10)
+           .attr("fill", function(d, i) { return color(i); });
+           
+        //user input plots
+        var data = JSON.parse(alldata);
+        makeMZUserInputPlot();
+        makeRetTimeUserInputPlot();
+
+        //Pathway Bar chart plot
+        makePathwayPlot()
+        
+        // initial draw
+        cyto_draw_figure(cytonodes[0], cytoedges[0], node_sizes[0]);
+    	var cy = $('#networkvisual').cytoscape('get');
+    	cy.panBy({ x: 0, y: -200 });
+    	
+        // support cytoscape.js  
+		function cyto_draw_figure(nodes, links, node_size) {  
+
+                    var svg = document.createElement('div');
+                    svg.setAttribute("id","svg2");
+                    svg.setAttribute("class","svg2");
+                    var nw = document.getElementById("networkvisual");
+                    nw.appendChild(svg);
+
+				$('#svg2').cytoscape({
+						style: cytoscape.stylesheet()
+						.selector('node')
+						  .css({
+							'content': 'data(id)',
+							'font-size': node_size,
+							'min-zoomed-font-size': 8,
+							'background-color': 'mapData(group, 0, 19, blue, red)'
+						  })
+						.selector('edge')
+						  .css({
+							'target-arrow-shape': 'triangle',
+							'width': 4,
+							'line-color': '#ddd',
+							'target-arrow-color': '#ddd'
+						  })
+						.selector('.highlighted')
+						  .css({
+							'background-color': '#61bffc',
+							'line-color': '#61bffc',
+							'target-arrow-color': '#61bffc',
+							'transition-property': 'background-color, line-color, target-arrow-color',
+							'transition-duration': '0.5s'
+						  }),
+  
+					  layout: {
+						name: 'spread',
+						minDist: 40,
+						directed: true,
+						padding: 10,
+						//fit: false,
+					  },
+					  
+					  elements: {
+						  nodes: nodes, 
+						  edges: links
+						},
+  
+					  zoom: 1,
+					  minZoom: 0.1,
+ 					  maxZoom: 5,
+
+				});
+	
+		}
+	
+
+        // support d3.js  
+        function d3_draw_figure(nodes, links, node_size) {
+
+            var svg = document.createElement('div');
+            svg.setAttribute("id","svg2");
+            svg.setAttribute("class","svg2");
+            var nw = document.getElementById("networkvisual");
+            nw.appendChild(svg);
+
+            var svg = d3.select("#svg2").append("svg").attr("id", "svg_networkvisual").attr("width", w).attr("height", h);
+            var force = d3.layout.force()
+                      .charge(-480)
+                      .linkDistance(80)
+                      .gravity(0.3)
+                      .size([w, h]);
+    
+            force.nodes(nodes)
+              .links(links)
+              .start();
+            
+            var link = svg.selectAll(".link")
+              .data(links)
+              .enter().append("line")
+              .attr("class", "link")
+              .style("stroke-width", 2);
+            
+            var node = svg.selectAll(".node")
+              .data(nodes)
+              .enter().append("circle")
+              .attr("class", "node")
+              .attr("r", node_size)
+              .style("fill", function(d) { return color(d.group); })
+              .style("fill-opacity", .6)
+              .call(force.drag);
+            
+            var text = svg.selectAll(".text")
+              .data(nodes)
+              .enter().append("text")
+              .attr("font-family", "sans-serif")
+              .attr("font-size", "9px")
+              .attr("text-anchor", "middle")
+              .text(function(d) { return d.name; });
+            
+            force.on("tick", function() {
+                link.attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+            
+                node.attr("cx", function(d) { return d.x; })
+                    .attr("cy", function(d) { return d.y; });
+            
+                text.attr("x", function(d) { return d.x; })
+                    .attr("y", function(d) { return d.y; });
+              });
+        }
+    
+    
+        function inv(i) {
+           if (i==0)
+              return 0
+           else if (i==1)
+              return 2
+           else
+              return 1
+}
+
+    	// added support of two styles
+        function updateDrawing() {
+            var idx = document.getElementById("nmodule_select").selectedIndex;
+            var ndx = document.getElementById("nsize_select").selectedIndex;
+            var vdx = document.getElementById("vstyle_select").selectedIndex;
+            
+            //d3.select("#svg_networkvisual").remove();
+            var svg = document.getElementById("svg2");
+	    svg.parentNode.removeChild(svg);
+
+            //var cy = $('#networkvisual').cytoscape('get');
+            //cy.remove( cy.elements() );
+            
+            // 0 for cytoscape style, drag; 1 for d3 style, force
+            if (vdx == 0) {
+            cyto_draw_figure(cytonodes[idx], cytoedges[idx], node_sizes[inv(ndx)]);
+            
+    		var cy = $('#networkvisual').cytoscape('get');
+    		cy.panBy({ x: 0, y: -200 });
+            
+            } else {
+            d3_draw_figure(nodes[idx], links[idx], node_sizes[ndx]);
+            }
+        }
+    
+    </script>
+    </body> </html> 

@@ -14,7 +14,7 @@ class DataSource(object):
 
     def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
                  reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None,
-                 min_replace=SMALL, min_hits=MIN_HITS):
+                 min_replace=SMALL, min_hits=MIN_HITS, mz_rt_df = None):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name
@@ -33,6 +33,7 @@ class DataSource(object):
         self.reactome_query = reactome_query
         self.min_replace = min_replace
         self.min_hits = min_hits
+        self.mz_rt_df = mz_rt_df # a df with id, mass and retention time columns
 
         self.groups = dict(self.experimental_design['groups'].items())
         for group in self.groups:
@@ -98,6 +99,38 @@ class DataSource(object):
         logger.debug('Computing unique id counts')
         self.pathway_unique_ids_count = len(self._get_pathway_unique_ids())
         self.pathway_dataset_unique_ids_count = len(self._get_pathway_dataset_unique_ids())
+
+
+    def get_mass_to_charge(self):
+
+        for cols in self.mz_rt_df:
+            if cols == self.mz_rt_df['m/z']:
+                return self.mz_rt_df['m/z'].tolist()
+            else:
+                print("m/z data missing from input")
+
+    def get_retention_time(self):
+
+        for cols in self.mz_rt_df:
+            if cols == self.mz_rt_df['retention_time']:
+                return self.mz_rt_df['retention_time'].tolist()
+            else:
+                print("retention time data missing from input")
+
+    def calculate_p(self):
+        #students t for generating p values per compound
+
+        case = self.experimental_design['comparisons'][0]
+        control = self.experimental_design['comparisons'][1]
+
+        case_data = self.measurement_df[case]
+        control_data = self.experimental_design[control]
+
+
+
+
+
+
 
     def get_database(self, database_name, mp_only, reactome_query, reactome_species):
         loader = None
