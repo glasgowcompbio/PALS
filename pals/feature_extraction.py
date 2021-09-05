@@ -1,13 +1,18 @@
+import os
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 from loguru import logger
+from mummichog.get_user_data import InputUserData
+from scipy.stats import stats
 from sklearn import preprocessing
+from statsmodels.stats.multitest import multipletests
 
 from .loader import PiMP_KEGG_Loader, CompoundOnlineLoader, CompoundOfflineLoader, UniProtLoader, EnsemblLoader
 from .common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
     DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE, MIN_HITS, SMALL
+from mummichog import get_user_data
 
 
 class DataSource(object):
@@ -33,7 +38,7 @@ class DataSource(object):
         self.reactome_query = reactome_query
         self.min_replace = min_replace
         self.min_hits = min_hits
-        self.mz_rt_df = mz_rt_df # a df with id, mass and retention time columns
+        self.mz_rt_df = mz_rt_df #a df with id, mass and retention time columns
 
         self.groups = dict(self.experimental_design['groups'].items())
         for group in self.groups:
@@ -117,17 +122,107 @@ class DataSource(object):
             else:
                 print("retention time data missing from input")
 
-    def calculate_p(self):
-        #students t for generating p values per compound
 
-        case = self.experimental_design['comparisons'][0]
-        control = self.experimental_design['comparisons'][1]
+    def create_mummichog_ds(self, comparisons = None):
+        #create a datasource to run mummichog calculate p values
+        #user can pass the comparisons list below themselves
 
-        case_data = self.measurement_df[case]
-        control_data = self.experimental_design[control]
+        comparisons = [ #testing purposes
+            ('beer1', 'beer2'),
+            ('beer3', 'beer4')
+        ]
+
+        full_df = self.get_measurements()
+        comps = self.experimental_design['comparisons']
+        comparison_counter = 0 #keep track of how many comparisons there are
+        result_dict = { } #K/V - comparison/idx, p, t statistics
+
+        for i in range(len(comps)):
+            result_dict[comparisons[i]] = list() #adding comparison keys to dictionary
+
+        for comp in comps:
+
+            case_reps = self.get_comparison_samples(comp)[0]
+            control_reps = self.get_comparison_samples(comp)[1]
+
+            full_replicates = case_reps + control_reps
+
+            comparison_subset = full_df[full_replicates]
+
+            #RUN T TEST
+            results = []
+
+            for idx, row in comparison_subset.iterrows():
+                case_log = np.log(row[case_reps].values)
+                control_log = np.log(row[control_reps].values)
+
+                stat, pvalue = stats.ttest_ind(case_log, control_log)
+
+                if str(pvalue) == 'nan' or str(stat) == 'nan':
+                    continue
+
+                reject, accept, _, _ = multipletests(pvalue, method= 'fdr_bh')
+
+                res = [idx, accept[0], stat] #for some reason accept is in list
+                results.append(res)
+
+            result_dict[comparisons[comparison_counter]].append(results)
+
+            comparison_counter += 1
+
+        #construct dataframes
+        comparison_dataframes = []
+        cols = ['m/z', 'retention_time', 'p-value', 't-score', 'custom_id (peak id)']
+        formatting_number = 1
+        file_names = []
+
+        for comp in range(len(comps)):
+            df = pd.DataFrame(result_dict[comparisons[comp]][0][0:], columns=['custom_id (peak id)','p-value', 't-score'])
+            df['m/z'] = self.mz_rt_df['m/z']
+            df['retention_time'] = self.mz_rt_df['retention_time']
+
+            df = df[cols]
+
+            comparison_dataframes.append(df)
+
+            try:
+                df.to_csv("temp" + str(formatting_number) + ".txt", sep="\t")
+                file_names.append("temp" + str(formatting_number) + ".txt")
+                formatting_number += 1
+            except IOError:
+                print("Unable to write out dataframe")
+
+        mummichog_pa_objects = [] #list to hold per comparison mummichog objects
+        output = 'test'
+
+        opt_dict = { #dreaded dictionary of doom
+            'outdir': os.getcwd(),
+            'infile': '',
+            'output': output,
+            'workdir': os.getcwd(),
+
+            # Mummichog Options
+
+            'network': 'human',
+            'modeling': None,
+            'cutoff': 0.05,
+            'permutation': 5,
+            'mode': 'pos_default',
+            'instrument': 'unspecified',
+            'force_primary_ion': True,
+
+        }
+
+        for file in file_names:
+            mummichog_options = opt_dict
+            mummichog_options['infile'] = file
+            new_mummichog_object = InputUserData(mummichog_options) #InputUserData links MummichogPathwayAnalysis and DataSource classes
+            os.remove(file) #we don't need the files anymore, although maybe user would like to keep them
+            mummichog_pa_objects.append(new_mummichog_object)
 
 
 
+        return mummichog_pa_objects
 
 
 
