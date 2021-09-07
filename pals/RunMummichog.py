@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 class MummichogDataExporting(LocalExporting):
 
-    def __init__(self, PathwayAnalysis):
-        self.PathwayAnalysis = PathwayAnalysis
+    def __init__(self, pathway_analysis):
+        self.pathway_analysis = pathway_analysis
         self.pathway_enrich_df = pd.DataFrame(columns=['pathway', 'overlap_size', 'pathway_size', 'p-value',
                                                        'overlap_Empirical', 'overlap_features (id)',
                                                        'overlap_features (name)'])
@@ -19,9 +19,10 @@ class MummichogDataExporting(LocalExporting):
     def construct_pathway_enrich_df(self):
 
         resultstr = [['pathway', 'overlap_size', 'pathway_size', 'p-value',
-                      'overlap_EmpiricalCompounds (id)', 'overlap_features (id)', 'overlap_features (name)', ]]
+                                                       'overlap_Empirical', 'overlap_features (id)',
+                                                       'overlap_features (name)']]
 
-        for P in self.PathwayAnalysis.resultListOfPathways:
+        for P in self.pathway_analysis.resultListOfPathways:
 
             comp = P.overlap_EmpiricalCompounds
             EIDs = []
@@ -31,7 +32,9 @@ class MummichogDataExporting(LocalExporting):
                 EIDs.append(EID_set.EID)
                 cpds.append(EID_set.chosen_compounds)
 
-            names = [[self.PathwayAnalysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in y] for y in cpds]
+            print(P.adjusted_p)
+
+            names = [[self.pathway_analysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in y] for y in cpds]
             resultstr.append([str(x) for x in [P.name, P.overlap_size, P.EmpSize, P.adjusted_p]]
                              + [','.join(EIDs), ','.join(['/'.join(x) for x in cpds]),
                                 '$'.join(['/'.join(x) for x in names])])
@@ -51,7 +54,7 @@ class MummichogDataExporting(LocalExporting):
 
     def construct_mwas_plots(self):
 
-        figsize = (60, 30)
+        figsize = (15, 8)
         CutoffLine = -np.log10(self.PathwayAnalysis.mixedNetwork.data.paradict['cutoff'])
 
         sigList = [f for f in self.PathwayAnalysis.mixedNetwork.data.ListOfMassFeatures
@@ -70,8 +73,8 @@ class MummichogDataExporting(LocalExporting):
 
         fig, myaxes = plt.subplots(figsize=figsize, nrows=1, ncols=2)
         for ii in range(2):
-            myaxes[ii].scatter(X_black[ii], Y_black, s=100, c='black', linewidths=6, alpha=0.8)
-            myaxes[ii].scatter(X_green[ii], Y_green, s=100, c='green', linewidths=6, alpha=0.8)
+            myaxes[ii].scatter(X_black[ii], Y_black, s=10, c='black', linewidths=6, alpha=0.8)
+            myaxes[ii].scatter(X_green[ii], Y_green, s=10, c='green', linewidths=6, alpha=0.8)
             # lines
             myaxes[ii].plot([0, X_max[ii]], [CutoffLine, CutoffLine], 'g--')
 
@@ -85,10 +88,11 @@ class MummichogDataExporting(LocalExporting):
             # rotate to avoid overlap xticklabels
             plt.setp(myaxes[ii].get_xticklabels(), rotation=30, horizontalalignment='right')
 
-            myaxes[ii].xaxis.label.set_size(50)
-            myaxes[ii].yaxis.label.set_size(50)
+            myaxes[ii].xaxis.label.set_size(25)
+            myaxes[ii].yaxis.label.set_size(25)
 
-        plt.tight_layout()
+        #plt.tight_layout()
+        plt.show()
 
         # return fig
 
@@ -142,25 +146,40 @@ class MummichogDataExporting(LocalExporting):
 class MummichogPathwayAnalysis(Method):
 
     def __init__(self, mummichog_data_source):
-        # input_user_data - dict object to run mummichog
+        # mummichog_data_source - Input User data object
 
         # logger.debug('Mummichog initialised')
-        self.mummichog_data_source = InputUserData(mummichog_data_source)
-        self.theoretical_model = metabolicNetwork(metabolicModels['human_model_mfn'])
-        self.mixed_network = DataMeetModel(self.theoretical_model, self.mummichog_data_source)
-        self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
+        self.comparisons_list = []
+        self.mummichog_datasource = mummichog_data_source
+
+        for data_source in mummichog_data_source:
+            self.theoretical_model = metabolicNetwork(metabolicModels['human_model_mfn'])
+            self.mixed_network = DataMeetModel(self.theoretical_model, data_source)
+            self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
+            self.comparisons_list.append(self.PA)
 
         # print("result list output", self.PA.resultListOfPathways)
 
         # Modular Analysis and Activity network omitted change local run to a class method
 
     def get_results(self):
-        self.PA.cpd_enrich_test()
-        self.PA.collect_hit_Trios()
+        #return a dataframe
 
-        results = MummichogDataExporting(self.PA)
+        result_objects = []
 
-        return results
+        resultstr = [['pathway', 'comp1/comp2 pvalue',  'comp3/4 pvalue',
+                      'overlap_EmpiricalCompounds (id)', 'overlap_features (id)', 'overlap_features (name)', ]]
+
+        for comparison in self.comparisons_list:
+            comparison.cpd_enrich_test()
+            comparison.collect_hit_Trios()
+            results = MummichogDataExporting(comparison)
+            result_objects.append(results)
+
+
+
+        return result_objects
+
 
     def get_mixed_network(self):
         return self.mixed_network
