@@ -17,9 +17,9 @@ from mummichog import get_user_data
 
 class DataSource(object):
 
-    def __init__(self, measurement_df, annotation_df, experimental_design, database_name,
+    def __init__(self, measurement_df, annotation_df, experimental_design, database_name, comparisons = None,
                  reactome_species=None, reactome_metabolic_pathway_only=True, reactome_query=False, database=None,
-                 min_replace=SMALL, min_hits=MIN_HITS, mz_rt_df = None):
+                 min_replace=SMALL, min_hits=MIN_HITS, mz_rt_df=None):
         """
         Creates a data source for PALS analysis
         :param measurement_df: a dataframe of peak intensities, where index = row id and columns = sample_name
@@ -43,7 +43,8 @@ class DataSource(object):
         self.groups = dict(self.experimental_design['groups'].items())
         for group in self.groups:
             assert len(self.groups[group]) > 1, 'Group %s must have more than 1 member' % group
-        self.comparisons = self.experimental_design['comparisons']
+
+        self.comparisons = comparisons
 
         if database is None:
             logger.debug('Using %s as database' % database_name)
@@ -186,7 +187,7 @@ class DataSource(object):
             comparison_dataframes.append(df)
 
             try:
-                df.to_csv("temp" + str(formatting_number) + ".txt", sep="\t")
+                df.to_csv("temp" + str(formatting_number) + ".txt", sep="\t", index=False)
                 file_names.append("temp" + str(formatting_number) + ".txt")
                 formatting_number += 1
             except IOError:
@@ -197,7 +198,7 @@ class DataSource(object):
 
         opt_dict = { #dreaded dictionary of doom
             'outdir': os.getcwd(),
-            'infile': '',
+            'infile': 'temp1.txt',
             'output': output,
             'workdir': os.getcwd(),
 
@@ -206,19 +207,19 @@ class DataSource(object):
             'network': 'human',
             'modeling': None,
             'cutoff': 0.05,
-            'permutation': 5,
+            'permutation': 100,
             'mode': 'pos_default',
             'instrument': 'unspecified',
             'force_primary_ion': True,
 
         }
 
-        for file in file_names:
-            mummichog_options = opt_dict
-            mummichog_options['infile'] = file
-            new_mummichog_object = InputUserData(mummichog_options) #InputUserData links MummichogPathwayAnalysis and DataSource classes
-            os.remove(file) #we don't need the files anymore, although maybe user would like to keep them
-            mummichog_pa_objects.append(new_mummichog_object)
+        #for file in file_names:
+            #mummichog_options = opt_dict
+            #mummichog_options['infile'] = file
+            #os.remove(file) #we don't need the files anymore, although maybe user would like to keep them
+
+        mummichog_pa_objects.append(opt_dict)
 
 
 
