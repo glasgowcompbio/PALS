@@ -55,12 +55,12 @@ class MummichogDataExporting(LocalExporting):
     def construct_mwas_plots(self):
 
         figsize = (15, 8)
-        CutoffLine = -np.log10(self.PathwayAnalysis.mixedNetwork.data.paradict['cutoff'])
+        CutoffLine = -np.log10(self.pathway_analysis.mixedNetwork.data.paradict['cutoff'])
 
-        sigList = [f for f in self.PathwayAnalysis.mixedNetwork.data.ListOfMassFeatures
-                   if f.p_value < self.PathwayAnalysis.mixedNetwork.data.paradict['cutoff']]
-        restList = [f for f in self.PathwayAnalysis.mixedNetwork.data.ListOfMassFeatures
-                    if f.p_value >= self.PathwayAnalysis.mixedNetwork.data.paradict['cutoff']]
+        sigList = [f for f in self.pathway_analysis.mixedNetwork.data.ListOfMassFeatures
+                   if f.p_value < self.pathway_analysis.mixedNetwork.data.paradict['cutoff']]
+        restList = [f for f in self.pathway_analysis.mixedNetwork.data.ListOfMassFeatures
+                    if f.p_value >= self.pathway_analysis.mixedNetwork.data.paradict['cutoff']]
 
         Y_label = "-log10 p-value"
         Y_black = [-np.log10(f.p_value) for f in restList]
@@ -68,8 +68,8 @@ class MummichogDataExporting(LocalExporting):
         X_label = ["m/z", "Retention time"]
         X_black = [[f.mz for f in restList], [f.retention_time for f in restList]]
         X_green = [[f.mz for f in sigList], [f.retention_time for f in sigList]]
-        X_max = [self.PathwayAnalysis.mixedNetwork.data.max_mz,
-                 self.PathwayAnalysis.mixedNetwork.data.max_retention_time]
+        X_max = [self.pathway_analysis.mixedNetwork.data.max_mz,
+                 self.pathway_analysis.mixedNetwork.data.max_retention_time]
 
         fig, myaxes = plt.subplots(figsize=figsize, nrows=1, ncols=2)
         for ii in range(2):
@@ -98,12 +98,12 @@ class MummichogDataExporting(LocalExporting):
 
     def pathway_significance_plot(self):
 
-        self.PathwayAnalysis.permutation_record.sort()
+        self.pathway_analysis.permutation_record.sort()
 
-        Y_data = [-np.log10(x) for x in self.PathwayAnalysis.permutation_record]
+        Y_data = [-np.log10(x) for x in self.pathway_analysis.permutation_record]
         fig = plt.figure(figsize=(5, 4))
         plt.plot(range(len(Y_data)), Y_data, 'b.')
-        for P in self.PathwayAnalysis.resultListOfPathways[:10]:
+        for P in self.pathway_analysis.resultListOfPathways[:10]:
             YY = -np.log10(P.p_EASE)
             plt.plot([0, 0.1 * len(Y_data)], [YY, YY], 'r--')
 
@@ -115,20 +115,20 @@ class MummichogDataExporting(LocalExporting):
     def export_EmpiricalCompounds(self):
 
         s = "EID\tmassfeature_rows\tstr_row_ion\tcompounds\tcompound_names\n"
-        for E in self.PathwayAnalysis.mixedNetwork.ListOfEmpiricalCompounds:
-            names = [self.PathwayAnalysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in E.compounds]
+        for E in self.pathway_analysis.mixedNetwork.ListOfEmpiricalCompounds:
+            names = [self.pathway_analysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in E.compounds]
             s += '\t'.join([E.EID, ';'.join(E.massfeature_rows), E.str_row_ion, ';'.join(E.compounds), '$'.join(names)]
                            ) + '\n'
 
         s = "input_row\tEID\tstr_row_ion\tcompounds\tcompound_names\tinput_row\tm/z\tretention_time\tp_value\tstatistic\tCompoundID_from_user\n"
 
-        for row in self.PathwayAnalysis.mixedNetwork.mzrows:
+        for row in self.pathway_analysis.mixedNetwork.mzrows:
             # not all input rows match to an empCpd
             try:
-                for E in self.PathwayAnalysis.mixedNetwork.rowindex_to_EmpiricalCompounds[row]:
-                    names = [self.PathwayAnalysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in E.compounds]
+                for E in self.pathway_analysis.mixedNetwork.rowindex_to_EmpiricalCompounds[row]:
+                    names = [self.pathway_analysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in E.compounds]
                     s += '\t'.join([row, E.EID, E.str_row_ion, ';'.join(E.compounds), '$'.join(names)]
-                                   ) + '\t' + self.PathwayAnalysis.mixedNetwork.rowDict[row].make_str_output() + '\n'
+                                   ) + '\t' + self.pathway_analysis.mixedNetwork.rowDict[row].make_str_output() + '\n'
             except KeyError:
                 pass
 
@@ -149,14 +149,11 @@ class MummichogPathwayAnalysis(Method):
         # mummichog_data_source - Input User data object
 
         # logger.debug('Mummichog initialised')
-        self.comparisons_list = []
-        self.mummichog_datasource = mummichog_data_source
+        self.input_user_data = InputUserData(mummichog_data_source)
+        self.theoretical_model = metabolicNetwork(metabolicModels['worm_model_icel1273'])
+        self.mixed_network = DataMeetModel(self.theoretical_model, self.input_user_data)
+        self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
 
-        for data_source in mummichog_data_source:
-            self.theoretical_model = metabolicNetwork(metabolicModels['human_model_mfn'])
-            self.mixed_network = DataMeetModel(self.theoretical_model, data_source)
-            self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
-            self.comparisons_list.append(self.PA)
 
         # print("result list output", self.PA.resultListOfPathways)
 
@@ -167,18 +164,11 @@ class MummichogPathwayAnalysis(Method):
 
         result_objects = []
 
-        resultstr = [['pathway', 'comp1/comp2 pvalue',  'comp3/4 pvalue',
-                      'overlap_EmpiricalCompounds (id)', 'overlap_features (id)', 'overlap_features (name)', ]]
+        self.PA.cpd_enrich_test()
+        self.PA.collect_hit_Trios()
 
-        for comparison in self.comparisons_list:
-            comparison.cpd_enrich_test()
-            comparison.collect_hit_Trios()
-            results = MummichogDataExporting(comparison)
-            result_objects.append(results)
-
-
-
-        return result_objects
+        results = MummichogDataExporting(self.PA)
+        return results
 
 
     def get_mixed_network(self):
