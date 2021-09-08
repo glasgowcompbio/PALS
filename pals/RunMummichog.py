@@ -3,7 +3,7 @@ from mummichog.functional_analysis import InputUserData, DataMeetModel, PathwayA
 from mummichog.models import metabolicNetwork, metabolicModels
 from mummichog.reporting import LocalExporting
 import pandas as pd
-from pals.base import Method
+from .base import Method
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,6 +17,8 @@ class MummichogDataExporting(LocalExporting):
                                                        'overlap_features (name)'])
 
     def construct_pathway_enrich_df(self):
+
+
 
         resultstr = [['pathway', 'overlap_size', 'pathway_size', 'p-value',
                                                        'overlap_Empirical', 'overlap_features (id)',
@@ -32,8 +34,6 @@ class MummichogDataExporting(LocalExporting):
                 EIDs.append(EID_set.EID)
                 cpds.append(EID_set.chosen_compounds)
 
-            print(P.adjusted_p)
-
             names = [[self.pathway_analysis.mixedNetwork.model.dict_cpds_def.get(x, '') for x in y] for y in cpds]
             resultstr.append([str(x) for x in [P.name, P.overlap_size, P.EmpSize, P.adjusted_p]]
                              + [','.join(EIDs), ','.join(['/'.join(x) for x in cpds]),
@@ -42,6 +42,8 @@ class MummichogDataExporting(LocalExporting):
         self.pathway_enrich_df = self.pathway_enrich_df.from_records(resultstr)
         self.pathway_enrich_df.columns = self.pathway_enrich_df.iloc[0]
         self.pathway_enrich_df = self.pathway_enrich_df.iloc[1:]
+
+        print(self.pathway_enrich_df.head())
 
         return self.pathway_enrich_df.copy()
 
@@ -149,10 +151,14 @@ class MummichogPathwayAnalysis(Method):
         # mummichog_data_source - Input User data object
 
         # logger.debug('Mummichog initialised')
-        self.input_user_data = InputUserData(mummichog_data_source)
-        self.theoretical_model = metabolicNetwork(metabolicModels['worm_model_icel1273'])
-        self.mixed_network = DataMeetModel(self.theoretical_model, self.input_user_data)
-        self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
+        self.comparisons_list = []
+
+
+        for ds in mummichog_data_source:
+            self.theoretical_model = metabolicNetwork(metabolicModels['worm_model_icel1273'])
+            self.mixed_network = DataMeetModel(self.theoretical_model, ds)
+            self.PA = PathwayAnalysis(self.mixed_network.model.metabolic_pathways, self.mixed_network)
+            self.comparisons_list.append(self.PA)
 
 
         # print("result list output", self.PA.resultListOfPathways)
@@ -162,13 +168,15 @@ class MummichogPathwayAnalysis(Method):
     def get_results(self):
         #return a dataframe
 
-        result_objects = []
+        result_list = []
 
-        self.PA.cpd_enrich_test()
-        self.PA.collect_hit_Trios()
+        for comparison in self.comparisons_list:
+            comparison.cpd_enrich_test()
+            comparison.collect_hit_Trios()
+            results = MummichogDataExporting(comparison)
+            result_list.append(results)
 
-        results = MummichogDataExporting(self.PA)
-        return results
+        return result_list
 
 
     def get_mixed_network(self):
