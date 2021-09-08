@@ -10,8 +10,8 @@ intdf, annodf, groups = load_data("int_df.csv", "annotation_df.csv") #path to be
 
 mz_df = pd.DataFrame(columns = ['m/z', 'retention_time'])
 
-mz_df['m/z'] = [np.random.randint(1, 150) for i in range(7375)]
-mz_df['retention_time'] = [np.random.randint(1, 300) for i in range(7375)]
+mz_df['m/z'] = [np.random.uniform(1, 150) for i in range(7375)]
+mz_df['retention_time'] = [np.random.randint(0, 120) for i in range(7375)]
 
 
 comparisons = [
@@ -31,13 +31,14 @@ for case, control in comparisons:
     })
 
 
-ds = DataSource(intdf, annodf, experimental_design, DATABASE_PIMP_KEGG, min_replace=SMALL, mz_rt_df= mz_df, comparisons= comparisons)
+ds = DataSource(intdf, annodf, experimental_design, DATABASE_PIMP_KEGG, min_replace=SMALL, mz_rt_df= mz_df)
 
 mummichog = ds.create_mummichog_ds()
 
-pathway_analysis = MummichogPathwayAnalysis(mummichog)
+pathway_analysis = MummichogPathwayAnalysis(mummichog[0])
 data_objects = pathway_analysis.get_results()
 
-pathway_df = data_objects[1].construct_pathway_enrich_df()
+pathway_df = data_objects.construct_pathway_enrich_df()
+mwas = data_objects.construct_mwas_plots()
 
 pathway_df.to_csv("new2_df.csv")
