@@ -131,14 +131,14 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, p
 
 def _get_database(int_df, pathway_names):
     # create pathway dict
-    pathway_dict = {}
+    self.pathway_dict = {}
     for k, v in pathway_names.items():
         pathway_dict[k] = {'display_name': k}
 
     # create entity and mapping dict
-    entity_dict = {}
-    mapping_dict = defaultdict(list)
-    annotations = {}
+    self.entity_dict = {}
+    self.mapping_dict = defaultdict(list)
+    self.annotations = {}
     for row_id, row in int_df.iterrows():
         compound_id = 'C%d' % row_id
         pathway_id = row['pathway_id']
