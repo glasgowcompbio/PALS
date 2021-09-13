@@ -61,6 +61,21 @@ class DataSource(object):
         self.entity_dict = self.database['entity_dict']  # compound id -> formula
         self.mapping_dict = self.database['mapping_dict']  # compound id -> [ mapids ]
 
+        try: # here database is a Database object
+            self.pathway_dict = self.database.pathway_dict  # mapid -> pathway name
+            self.entity_dict = self.database.entity_dict  # compound id -> formula
+            self.mapping_dict = self.database.mapping_dict  # compound id -> [ mapids ]
+
+        except AttributeError: # here database is a dictionary
+            # the dict needs to have all these 3 keys
+            assert 'pathway_dict' in self.database
+            assert 'entity_dict' in self.database
+            assert 'mapping_dict' in self.database
+            # simply copy the entries over
+            self.pathway_dict = self.database['pathway_dict']
+            self.entity_dict = self.database['entity_dict']
+            self.mapping_dict = self.database['mapping_dict']
+
         # map between pathway id to compound ids and formulas
         logger.debug('Mapping pathway to unique ids')
         pathway_to_unique_ids_dict = defaultdict(set)  # mapid -> [ formulas ]
