@@ -7,7 +7,9 @@ import pylab as plt
 import seaborn as sns
 from loguru import logger
 
-from pals.feature_extraction import DataSource
+from PALS.pals.feature_extraction import DataSource
+
+from PALS import pals
 
 
 def construct_intensity_df(sample_fnames, pathway_names, random=False, background_pathways=None):
@@ -131,14 +133,14 @@ def convert_to_data_source(int_df, pathway_names, case_fnames, control_fnames, p
 
 def _get_database(int_df, pathway_names):
     # create pathway dict
-    self.pathway_dict = {}
+    pathway_dict = {}
     for k, v in pathway_names.items():
         pathway_dict[k] = {'display_name': k}
 
     # create entity and mapping dict
-    self.entity_dict = {}
-    self.mapping_dict = defaultdict(list)
-    self.annotations = {}
+    entity_dict = {}
+    mapping_dict = defaultdict(list)
+    annotations = {}
     for row_id, row in int_df.iterrows():
         compound_id = 'C%d' % row_id
         pathway_id = row['pathway_id']
