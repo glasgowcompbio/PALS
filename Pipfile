@@ -18,6 +18,7 @@ gseapy = "==0.9.16"
 streamlit = "*"
 tqdm = "*"
 pillow = "*"
+mummichog = "*"
 
 [dev-packages]
 jupyterlab = "*"
