@@ -57,9 +57,9 @@ class DataSource(object):
             logger.debug('Using user-provided database')
             assert database_name is None
             self.database = database
-        self.pathway_dict = self.database.pathway_dict  # mapid -> pathway name
-        self.entity_dict = self.database.entity_dict  # compound id -> formula
-        self.mapping_dict = self.database.mapping_dict  # compound id -> [ mapids ]
+        self.pathway_dict = self.database['pathway_dict']  # mapid -> pathway name
+        self.entity_dict = self.database['entity_dict']  # compound id -> formula
+        self.mapping_dict = self.database['mapping_dict']  # compound id -> [ mapids ]
 
         # map between pathway id to compound ids and formulas
         logger.debug('Mapping pathway to unique ids')
