@@ -9,6 +9,8 @@ from scipy.stats import stats
 from sklearn import preprocessing
 from statsmodels.stats.multitest import multipletests
 
+
+
 from .loader import PiMP_KEGG_Loader, CompoundOnlineLoader, CompoundOfflineLoader, UniProtLoader, EnsemblLoader
 from .common import DATABASE_PIMP_KEGG, DATABASE_REACTOME_KEGG, DATABASE_REACTOME_CHEBI, \
     DATABASE_REACTOME_UNIPROT, DATABASE_REACTOME_ENSEMBL, MIN_REPLACE, MIN_HITS, SMALL
@@ -214,12 +216,13 @@ class DataSource(object):
 
         }
 
-        #for file in file_names:
-            #mummichog_options = opt_dict
-            #mummichog_options['infile'] = file
-            #os.remove(file) #we don't need the files anymore, although maybe user would like to keep them
+        for file in file_names:
+            mummichog_options = opt_dict
+            mummichog_options['infile'] = file
+            input_user_data = InputUserData(mummichog_options)
 
-        mummichog_pa_objects.append(opt_dict)
+            os.remove(file) #we don't need the files anymore, although maybe user would like to keep them
+            mummichog_pa_objects.append(input_user_data)
 
 
 
