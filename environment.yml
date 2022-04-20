@@ -1,0 +1,26 @@
+name: PALS
+channels:
+- conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - pandas
+  - seaborn
+  - scikit-learn
+  - matplotlib
+  - plotly
+  - statsmodels
+  - loguru
+  - requests
+  - jupyterlab
+  - bioservices
+  - streamlit
+  - tqdm
+  - pillow
+  - pip
+  - pip:
+     - neo4j-driver
+     - gseapy==0.9.16
+     - twine
+     - build
+     - mummichog
