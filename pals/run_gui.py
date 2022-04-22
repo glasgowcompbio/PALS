@@ -71,17 +71,18 @@ def main():
 
         if len(gnps_url) > 0 and metadata_csv is not None:  # data is loaded
             params = show_gnps_widgets(gnps_url, None, metadata_csv, None)
-            significant_column = '%s/%s p-value' % (params['case'], params['control'])
+            if params is not None:
+                significant_column = '%s/%s p-value' % (params['case'], params['control'])
 
-            # run PLAGE on the GNPS data
-            try:
-                results = run_analysis(params)
-                df = process_gnps_results(results['df'], significant_column)
-                show_gnps_results(df, results)
-            except KeyError as e:
-                # usually this is because a group does not have any samples in the measurement df, e.g. blanks and QCs
-                st.warning('No measurements found for the group "%s" in the peak table. '
-                           'Please select another group.' % e.args[0])
+                # run PLAGE on the GNPS data
+                try:
+                    results = run_analysis(params)
+                    df = process_gnps_results(results['df'], significant_column)
+                    show_gnps_results(df, results)
+                except KeyError as e:
+                    # usually this is because a group does not have any samples in the measurement df, e.g. blanks and QCs
+                    st.warning('No measurements found for the group "%s" in the peak table. '
+                               'Please select another group.' % e.args[0])
         else:
             write_main_text(analysis_type)
 
