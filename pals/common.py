@@ -61,6 +61,7 @@ GUI_PATHWAY_ANALYSIS = 'Pathway Analysis'
 GUI_GNPS_MOLECULAR_FAMILY_ANALYSIS = 'GNPS Molecular Family Analysis'
 GUI_GNPS_MS2LDA_ANALYSIS = 'GNPS-MS2LDA Analysis'
 
+PLAGE_FIXED_SEED = 123
 
 def load_json(json_file, compressed=False):
     if compressed:

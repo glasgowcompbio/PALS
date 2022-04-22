@@ -11,7 +11,8 @@ from scipy.stats import hypergeom
 from scipy.stats import ttest_ind
 
 from .base import Method
-from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, post_filter_df_by_min_hits
+from .common import NUM_RESAMPLES, PLAGE_WEIGHT, HG_WEIGHT, is_comparison_used, \
+    post_filter_df_by_min_hits, PLAGE_FIXED_SEED
 from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalisation, ZScoreNormalisation, \
     ZeroAndNegativeReplace
 
@@ -19,7 +20,7 @@ from .preprocessing import MinValueImputation, RowAverageImputation, LogNormalis
 class PLAGE(Method):
 
     def __init__(self, data_source, num_resamples=NUM_RESAMPLES, plage_weight=PLAGE_WEIGHT, hg_weight=HG_WEIGHT,
-                 case=None, control=None, seed=None, preprocessors=None):
+                 case=None, control=None, seed=PLAGE_FIXED_SEED, preprocessors=None):
         """
         Creates a PALS analysis
         :param data_source: a DataSource object
