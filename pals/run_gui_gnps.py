@@ -359,6 +359,7 @@ def plot_heatmap(all_groups, all_samples, intensities_df, member_df, members, ro
     plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0)
 
     # render plot
+    st.set_option('deprecation.showPyplotGlobalUse', False)
     st.pyplot()
 
 
