@@ -118,8 +118,12 @@ class PLAGE(Method):
                     streamlit_pbar.progress(progress)
                 condition_1, condition_2 = self._permute_two_lists(comparison_samples[0], comparison_samples[1])
                 permutation_tvalues = self._calculate_t_values(activity_df, condition_1, condition_2)
+
+                # drop nan for https://github.com/glasgowcompbio/PALS/issues/47
+                permutation_tvalues = permutation_tvalues[np.logical_not(np.isnan(permutation_tvalues))]
                 null_max_tvalues.append(max(permutation_tvalues))
                 null_min_tvalues.append(min(permutation_tvalues))
+
             stop = timeit.default_timer()
             # logger.debug('Total time %d' % (stop - start))
             tvalues = self._calculate_t_values(activity_df, comparison_samples[0], comparison_samples[1])
@@ -335,6 +339,9 @@ class PLAGE(Method):
         maxparams = genextreme.fit(null_max_tvalues)
         minparams = genextreme.fit([-x for x in null_min_tvalues])
         for tvalue in tvalues:
-            pvalue = genextreme.sf(tvalue, *maxparams) if tvalue >= 0 else genextreme.sf(-tvalue, *minparams)
+            if not np.isnan(tvalue):
+                pvalue = genextreme.sf(tvalue, *maxparams) if tvalue >= 0 else genextreme.sf(-tvalue, *minparams)
+            else:
+                pvalue = np.nan
             pvalues.append(pvalue)
         return pvalues
